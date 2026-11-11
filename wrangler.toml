@@ -1,9 +1,3 @@
 name = "transformacao-beleza-hair"
 compatibility_date = "2026-10-01"
 pages_build_output_dir = "."
-
-[[d1_databases]]
-binding = "DB"
-database_name = "transformacao-beleza-db"
-database_id = "PREENCHER_COM_ID_REAL_DO_D1"
-migrations_dir = "database"
