@@ -34,6 +34,10 @@ async function validSession(request, secret) {
   if (!payload || !signature || extra || !(await verify(payload,signature,secret))) return false;
   try { const data=JSON.parse(new TextDecoder().decode(fromB64url(payload))); return data.role==="owner" && Number.isInteger(data.exp) && data.exp > Math.floor(Date.now()/1000); } catch { return false; }
 }
+async function hashValue(value) {
+  const digest = await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value));
+  return b64url(digest);
+}
 function sameOrigin(request) {
   const origin = request.headers.get("Origin");
   return !origin || origin === new URL(request.url).origin;
@@ -68,7 +72,16 @@ export async function onRequest({request, env}) {
     let body; try { body=await request.json(); } catch { return json({error:"Dados inválidos."},400); }
     if (!env.ADMIN_PASSWORD || !env.SESSION_SECRET) return json({error:"Configure ADMIN_PASSWORD e SESSION_SECRET nos segredos do projeto."},503);
     const supplied=cleanText(body.password,200);
-    if (supplied.length !== env.ADMIN_PASSWORD.length || supplied !== env.ADMIN_PASSWORD) return json({error:"Senha incorreta."},401);
+    const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+    const ipHash = await hashValue(ip);
+    const attempts = await env.DB.prepare("SELECT COUNT(*) AS total FROM admin_login_attempts WHERE ip_hash=? AND attempted_at >= datetime('now','-15 minutes')").bind(ipHash).first();
+    if ((attempts?.total || 0) >= 8) return json({error:"Muitas tentativas. Aguarde 15 minutos antes de tentar novamente."},429);
+    if (supplied.length !== env.ADMIN_PASSWORD.length || supplied !== env.ADMIN_PASSWORD) {
+      await env.DB.prepare("INSERT INTO admin_login_attempts (ip_hash) VALUES (?)").bind(ipHash).run();
+      return json({error:"Senha incorreta."},401);
+    }
+    await env.DB.prepare("DELETE FROM admin_login_attempts WHERE ip_hash=?").bind(ipHash).run();
+    await env.DB.prepare("DELETE FROM admin_login_attempts WHERE attempted_at < datetime('now','-1 day')").run();
     const token=await makeSession(env.SESSION_SECRET);
     return json({ok:true},200,{ "set-cookie":COOKIE+"="+token+"; HttpOnly; Secure; SameSite=Strict; Path=/api/admin; Max-Age="+SESSION_SECONDS });
   }
