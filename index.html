@@ -76,10 +76,10 @@
         const response=await fetch('/api/request',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
         const result=await response.json();
         if(!response.ok) throw new Error(result.error||'Não foi possível registrar a solicitação.');
-        const msg=['Olá, Cátia! Registrei uma solicitação de agendamento pelo site.','Nome: '+payload.name,'Telefone: '+payload.phone,'Serviço: '+payload.service,'Data desejada: '+payload.date,'Horário desejado: '+payload.time,'Observações: '+(payload.notes||'Não informado'),'Código da solicitação: '+result.id,'','Pode confirmar se há disponibilidade?'].join('\\n');
+        const msg=['Olá, Cátia! Registrei uma solicitação de agendamento pelo site.','Nome: '+payload.name,'Telefone: '+payload.phone,'Serviço: '+payload.service,'Data desejada: '+payload.date,'Horário desejado: '+payload.time,'Observações: '+(payload.notes||'Não informado'),'Código da solicitação: '+result.id,'','Pode confirmar se há disponibilidade?'].join('\n');
         window.location.href='https://wa.me/5532988889108?text='+encodeURIComponent(msg);
       } catch(err) {
-        const msg=['Olá, Cátia! Estou enviando uma solicitação de agendamento pelo WhatsApp.','Nome: '+payload.name,'Telefone: '+payload.phone,'Serviço: '+payload.service,'Data desejada: '+payload.date,'Horário desejado: '+payload.time,'Observações: '+(payload.notes||'Não informado'),'','Aviso: o sistema online ainda não registrou esta solicitação. Por favor, confirme manualmente pelo WhatsApp.'].join('\\n');
+        const msg=['Olá, Cátia! Estou enviando uma solicitação de agendamento pelo WhatsApp.','Nome: '+payload.name,'Telefone: '+payload.phone,'Serviço: '+payload.service,'Data desejada: '+payload.date,'Horário desejado: '+payload.time,'Observações: '+(payload.notes||'Não informado'),'','Aviso: o sistema online ainda não registrou esta solicitação. Por favor, confirme manualmente pelo WhatsApp.'].join('\n');
         window.location.href='https://wa.me/5532988889108?text='+encodeURIComponent(msg);
       } finally {
         button.disabled=false; button.textContent='Enviar solicitação pelo WhatsApp';
