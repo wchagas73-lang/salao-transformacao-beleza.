@@ -92,8 +92,28 @@ export async function onRequest({request, env}) {
     const startsAt = date+"T"+time+":00-03:00";
     if (Date.parse(startsAt) <= Date.now()) return json({error:"Escolha uma data e horário futuros."},400);
     const id = crypto.randomUUID();
-    await env.DB.prepare("INSERT INTO appointments (id, customer_name, customer_phone, service_id, starts_at, status, customer_notes) VALUES (?, ?, ?, ?, ?, 'requested', ?)")
-      .bind(id,name,phone,service,startsAt,notes).run();
+    const serviceRow=await env.DB.prepare("SELECT duration_minutes,is_active FROM services WHERE id=?").bind(service).first();
+    if(!serviceRow || !serviceRow.is_active) return json({error:"Este serviço não está disponível no momento."},400);
+    const hoursRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='weekly_hours'").first();
+    if(serviceRow.duration_minutes && hoursRow){
+      let weekly; try { weekly=JSON.parse(hoursRow.setting_value); } catch { weekly=null; }
+      const weekday=new Date(Date.UTC(year,month-1,day)).getUTCDay();
+      const hours=weekly && weekly[String(weekday)];
+      if(!hours) return json({error:"O salão não atende neste dia. Escolha outra data."},409);
+      const toMin=s=>Number(s.slice(0,2))*60+Number(s.slice(3,5));
+      const startMin=hour*60+minute, endEpoch=Date.parse(startsAt)+serviceRow.duration_minutes*60000;
+      const endDate=new Date(endEpoch+3*60*60000).toISOString().slice(0,19);
+      const endsAt=endDate+"-03:00";
+      const intervalRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='slot_interval_minutes'").first();
+      const interval=Math.min(120,Math.max(15,Number(intervalRow?.setting_value)||30));
+      if(startMin<toMin(hours.open)||startMin+serviceRow.duration_minutes>toMin(hours.close)||(startMin-toMin(hours.open))%interval!==0) return json({error:"Esse horário está fora da agenda configurada."},409);
+      const inserted=await env.DB.prepare("INSERT INTO appointments (id,customer_name,customer_phone,service_id,starts_at,ends_at,status,customer_notes) SELECT ?,?,?,?,?,?,'requested',? WHERE NOT EXISTS (SELECT 1 FROM appointments WHERE status IN ('requested','confirmed') AND starts_at < ? AND ends_at > ?) AND NOT EXISTS (SELECT 1 FROM blocked_periods WHERE starts_at < ? AND ends_at > ?)")
+        .bind(id,name,phone,service,startsAt,endsAt,notes,endsAt,startsAt,endsAt,startsAt).run();
+      if(!inserted.meta?.changes) return json({error:"Esse horário acabou de ficar indisponível. Escolha outro horário."},409);
+    } else {
+      await env.DB.prepare("INSERT INTO appointments (id, customer_name, customer_phone, service_id, starts_at, status, customer_notes) VALUES (?, ?, ?, ?, ?, 'requested', ?)")
+        .bind(id,name,phone,service,startsAt,notes).run();
+    }
     return json({ok:true,id,message:"Solicitação recebida. O salão ainda precisa confirmar o horário."},201);
   }
   if (path === "/admin/login" && request.method === "POST") {
