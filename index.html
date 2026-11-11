@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#100e0d">
+  <meta name="description" content="Salão Transformação e Beleza Hair, com Cátia Souza. Conheça os serviços e solicite seu agendamento em Juiz de Fora.">
+  <title>Transformação e Beleza Hair | Cátia Souza</title>
+  <style>
+    :root{--bg:#100e0d;--panel:#191614;--gold:#d6b46a;--rose:#bd8580;--cream:#f5eee3;--muted:#b8aca0;--line:#40352c}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--cream);font-family:Georgia,'Times New Roman',serif}a{color:inherit;text-decoration:none}button,input,select,textarea{font:inherit}
+    .wrap{width:min(1120px,92%);margin:auto}.top{padding:22px 0;border-bottom:1px solid #ffffff16}.nav{display:flex;align-items:center;justify-content:space-between;gap:18px}.brand{font-size:17px;letter-spacing:2px;text-transform:uppercase}.brand span{display:block;color:var(--gold);font:10px Arial,sans-serif;letter-spacing:4px;margin-top:5px}.links{display:flex;gap:24px;color:var(--muted);font:13px Arial,sans-serif}.links a:hover{color:var(--gold)}
+    .hero{min-height:590px;display:grid;grid-template-columns:1.05fr .95fr;align-items:center;gap:42px;padding:70px 0}.eyebrow{color:var(--gold);font:11px Arial,sans-serif;letter-spacing:4px;text-transform:uppercase}.hero h1{font-size:clamp(42px,6vw,72px);font-weight:400;line-height:1.04;margin:20px 0}.hero h1 em{color:var(--gold);font-weight:400}.hero p{color:var(--muted);font:15px/1.8 Arial,sans-serif;max-width:490px}.actions{display:flex;gap:13px;flex-wrap:wrap;margin-top:30px}.btn{display:inline-flex;align-items:center;justify-content:center;padding:15px 22px;border:1px solid var(--gold);color:var(--bg);background:var(--gold);font:12px Arial,sans-serif;letter-spacing:1px;text-transform:uppercase;cursor:pointer}.btn.secondary{background:transparent;color:var(--gold)}.hero-art{min-height:430px;border:1px solid #9d7d493d;background:radial-gradient(ellipse at 50% 42%,#75533b 0,#35251f 34%,#191311 70%);display:flex;align-items:end;justify-content:center;position:relative;overflow:hidden}.hero-art:before{content:"";position:absolute;width:65%;height:115%;border:1px solid #d6b46a66;border-radius:50%;top:8%;left:18%}.hero-art:after{content:"";position:absolute;width:52%;height:90%;border:1px solid #bd858055;border-radius:50%;top:18%;left:24%}.art-caption{position:relative;z-index:1;text-align:center;padding:30px;background:linear-gradient(transparent,#100e0ddd);width:100%}.art-caption strong{display:block;font-size:26px;font-weight:400;color:var(--gold)}.art-caption small{font:10px Arial,sans-serif;letter-spacing:3px;color:var(--cream)}
+    section{padding:76px 0}.section-head{text-align:center;margin-bottom:38px}.section-head h2{font-size:40px;font-weight:400;margin:12px 0}.section-head p{font:14px/1.7 Arial,sans-serif;color:var(--muted);margin:auto;max-width:560px}.services{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.service{background:var(--panel);border:1px solid var(--line);padding:25px;min-height:150px}.service.featured{border-color:var(--gold);background:linear-gradient(145deg,#2a2119,#171311)}.service small{font:10px Arial,sans-serif;letter-spacing:2px;color:var(--rose)}.service h3{font-size:23px;font-weight:400;margin:13px 0 8px}.service p{font:13px/1.6 Arial,sans-serif;color:var(--muted);margin:0}
+    .about{display:grid;grid-template-columns:.8fr 1.2fr;gap:55px;align-items:center;background:#171311}.about-mark{border:1px solid var(--gold);padding:48px 25px;text-align:center}.about-mark b{font-size:38px;font-weight:400;color:var(--gold)}.about-mark span{display:block;font:10px Arial,sans-serif;letter-spacing:3px;margin-top:12px}.about h2{font-size:39px;font-weight:400;margin:12px 0}.about p{font:14px/1.8 Arial,sans-serif;color:var(--muted)}
+    .booking{display:grid;grid-template-columns:.8fr 1.2fr;gap:40px;align-items:start}.booking-info h2{font-size:42px;font-weight:400;margin:14px 0}.booking-info p{font:14px/1.8 Arial,sans-serif;color:var(--muted)}.form{background:var(--panel);border:1px solid var(--line);padding:28px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.field{display:flex;flex-direction:column;gap:8px}.field.full{grid-column:1/-1}.field label{font:11px Arial,sans-serif;letter-spacing:1px;color:var(--gold);text-transform:uppercase}.field input,.field select,.field textarea{width:100%;padding:13px;background:#100e0d;border:1px solid var(--line);color:var(--cream);outline:none}.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold)}.notice{font:11px/1.6 Arial,sans-serif;color:var(--muted);margin:18px 0}.form .btn{width:100%}
+    footer{border-top:1px solid var(--line);padding:28px 0;color:var(--muted);font:12px/1.8 Arial,sans-serif}.foot{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+    @media(max-width:760px){.links{gap:12px;font-size:11px}.hero{grid-template-columns:1fr;padding:55px 0}.hero-art{min-height:310px}.services{grid-template-columns:1fr 1fr}.about,.booking{grid-template-columns:1fr}.about{padding:55px 0}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.brand{font-size:14px}}
+    @media(max-width:430px){.links a:nth-child(2){display:none}.services{grid-template-columns:1fr}.hero h1{font-size:46px}.form{padding:19px}}
+  </style>
+</head>
+<body>
+  <header class="top"><div class="wrap nav">
+    <a class="brand" href="#">Transformação <span>e Beleza Hair</span></a>
+    <nav class="links"><a href="#servicos">Serviços</a><a href="#sobre">Sobre</a><a href="#agendar">Agendar</a></nav>
+  </div></header>
+  <main>
+    <div class="wrap hero">
+      <div><div class="eyebrow">Beleza • Cuidado • Transformação</div>
+        <h1>Realce sua beleza.<br><em>Revele sua essência.</em></h1>
+        <p>Um espaço dedicado à sua autoestima, com atendimento personalizado e cuidado em cada detalhe. Conheça o trabalho de Cátia Souza.</p>
+        <div class="actions"><a class="btn" href="#agendar">Solicitar agendamento</a><a class="btn secondary" href="#servicos">Conhecer serviços</a></div>
+      </div>
+      <div class="hero-art"><div class="art-caption"><strong>Mega Hair</strong><small>SUA BELEZA, SUA IDENTIDADE</small></div></div>
+    </div>
+    <section id="servicos"><div class="wrap">
+      <div class="section-head"><div class="eyebrow">Nossos cuidados</div><h2>Serviços</h2><p>Escolha o cuidado que combina com você. Os detalhes de valores e duração serão confirmados diretamente com o salão.</p></div>
+      <div class="services">
+        <article class="service featured"><small>ESPECIALIDADE</small><h3>Mega Hair</h3><p>Transformação e valorização dos cabelos com atendimento personalizado.</p></article>
+        <article class="service"><small>CUIDADO</small><h3>Hidratação</h3><p>Tratamento para cuidar da saúde e aparência dos fios.</p></article>
+        <article class="service"><small>BELEZA</small><h3>Progressivas</h3><p>Atendimento de acordo com a necessidade de cada cabelo.</p></article>
+        <article class="service"><small>ESTILO</small><h3>Corte</h3><p>Renove o visual com um corte pensado para você.</p></article>
+        <article class="service"><small>FINALIZAÇÃO</small><h3>Escova</h3><p>Acabamento e finalização para diferentes ocasiões.</p></article>
+        <article class="service"><small>COLORAÇÃO</small><h3>Luzes</h3><p>Iluminação dos fios com avaliação personalizada.</p></article>
+        <article class="service"><small>TRATAMENTO</small><h3>Relaxamento</h3><p>Procedimento realizado após avaliação dos cabelos.</p></article>
+      </div>
+    </div></section>
+    <section id="sobre" class="about"><div class="wrap" style="display:grid;grid-template-columns:.8fr 1.2fr;gap:55px;align-items:center">
+      <div class="about-mark"><b>Cátia Souza</b><span>TRANSFORMAÇÃO E BELEZA HAIR</span></div>
+      <div><div class="eyebrow">Quem cuida de você</div><h2>Seu momento de se sentir ainda mais bonita.</h2><p>Cátia Souza recebe cada cliente com atenção e cuidado, buscando entender o resultado desejado e indicar o serviço mais adequado. Um atendimento próximo, pensado para valorizar sua beleza.</p><p><strong style="color:var(--gold)">Endereço:</strong> Av. 7 de Setembro, 865, Condomínio Edifício Solar Paraíbuna (Galeria), Juiz de Fora/MG.</p></div>
+    </div></section>
+    <section id="agendar"><div class="wrap booking">
+      <div class="booking-info"><div class="eyebrow">Vamos conversar?</div><h2>Solicite seu horário.</h2><p>Preencha seus dados e envie sua solicitação pelo WhatsApp. O salão confirmará a disponibilidade do horário com você.</p><p><strong style="color:var(--gold)">WhatsApp:</strong> (32) 98888-9108</p></div>
+      <form class="form" id="bookingForm"><div class="form-grid">
+        <div class="field full"><label for="service">Serviço desejado</label><select id="service" required><option value="">Selecione um serviço</option><option>Mega Hair</option><option>Hidratação</option><option>Progressivas</option><option>Corte</option><option>Escova</option><option>Luzes</option><option>Relaxamento</option></select></div>
+        <div class="field"><label for="date">Data desejada</label><input id="date" type="date" required></div>
+        <div class="field"><label for="time">Horário desejado</label><input id="time" type="time" required></div>
+        <div class="field"><label for="name">Seu nome</label><input id="name" type="text" placeholder="Nome completo" required></div>
+        <div class="field"><label for="phone">Seu telefone</label><input id="phone" type="tel" placeholder="(00) 00000-0000" required></div>
+        <div class="field full"><label for="details">Observações (opcional)</label><textarea id="details" rows="3" placeholder="Conte um pouco sobre o que deseja..."></textarea></div>
+      </div><p class="notice">Esta é uma demonstração inicial. O envio é uma solicitação, não uma confirmação automática de reserva. O horário será confirmado pelo salão.</p><button class="btn" type="submit">Enviar solicitação pelo WhatsApp</button></form>
+    </div></section>
+  </main>
+  <footer><div class="wrap foot"><span>© <span id="year"></span> Transformação e Beleza Hair • Cátia Souza</span><span>Juiz de Fora • Minas Gerais</span></div></footer>
+  <script>
+    document.getElementById('year').textContent=new Date().getFullYear();
+    const dateInput=document.getElementById('date');
+    const today=new Date();dateInput.min=new Date(today.getTime()-today.getTimezoneOffset()*60000).toISOString().slice(0,10);
+    document.getElementById('bookingForm').addEventListener('submit',function(e){
+      e.preventDefault();
+      const v=id=>document.getElementById(id).value.trim();
+      const msg=['Olá, Cátia! Gostaria de solicitar um agendamento.','Nome: '+v('name'),'Telefone: '+v('phone'),'Serviço: '+v('service'),'Data desejada: '+v('date'),'Horário desejado: '+v('time'),'Observações: '+(v('details')||'Não informado'),'','Pode confirmar se há disponibilidade?'].join('\n');
+      window.open('https://wa.me/5532988889108?text='+encodeURIComponent(msg),'_blank','noopener');
+    });
+  </script>
+</body>
+</html>
