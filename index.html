@@ -66,11 +66,23 @@
     document.getElementById('year').textContent=new Date().getFullYear();
     const dateInput=document.getElementById('date');
     const today=new Date();dateInput.min=new Date(today.getTime()-today.getTimezoneOffset()*60000).toISOString().slice(0,10);
-    document.getElementById('bookingForm').addEventListener('submit',function(e){
+    document.getElementById('bookingForm').addEventListener('submit',async function(e){
       e.preventDefault();
       const v=id=>document.getElementById(id).value.trim();
-      const msg=['Olá, Cátia! Gostaria de solicitar um agendamento.','Nome: '+v('name'),'Telefone: '+v('phone'),'Serviço: '+v('service'),'Data desejada: '+v('date'),'Horário desejado: '+v('time'),'Observações: '+(v('details')||'Não informado'),'','Pode confirmar se há disponibilidade?'].join('\n');
-      window.open('https://wa.me/5532988889108?text='+encodeURIComponent(msg),'_blank','noopener');
+      const payload={name:v('name'),phone:v('phone'),service:v('service'),date:v('date'),time:v('time'),notes:v('details')};
+      const button=this.querySelector('button[type="submit"]');
+      button.disabled=true; button.textContent='Enviando solicitação...';
+      try {
+        const response=await fetch('/api/request',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+        const result=await response.json();
+        if(!response.ok) throw new Error(result.error||'Não foi possível registrar a solicitação.');
+        const msg=['Olá, Cátia! Registrei uma solicitação de agendamento pelo site.','Nome: '+payload.name,'Telefone: '+payload.phone,'Serviço: '+payload.service,'Data desejada: '+payload.date,'Horário desejado: '+payload.time,'Observações: '+(payload.notes||'Não informado'),'Código da solicitação: '+result.id,'','Pode confirmar se há disponibilidade?'].join('\\n');
+        window.location.href='https://wa.me/5532988889108?text='+encodeURIComponent(msg);
+      } catch(err) {
+        alert('Não foi possível registrar pelo sistema neste momento. Fale diretamente com o salão pelo WhatsApp (32) 98888-9108. Detalhe: '+err.message);
+      } finally {
+        button.disabled=false; button.textContent='Enviar solicitação pelo WhatsApp';
+      }
     });
   </script>
 </body>
