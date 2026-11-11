@@ -54,3 +54,13 @@ CREATE TABLE IF NOT EXISTS salon_settings (
 
 -- Não inserir horários de funcionamento ou durações presumidas.
 -- Esses dados dependem de confirmação da proprietária.
+
+-- Serviços cadastrados sem duração ou preço presumidos.
+INSERT OR IGNORE INTO services (id, name, description, display_order) VALUES
+('Mega Hair','Mega Hair','Atendimento mediante avaliação',1),
+('Hidratação','Hidratação','',2),
+('Progressivas','Progressivas','',3),
+('Corte','Corte','',4),
+('Escova','Escova','',5),
+('Luzes','Luzes','',6),
+('Relaxamento','Relaxamento','',7);
