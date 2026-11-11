@@ -79,7 +79,8 @@
         const msg=['Olá, Cátia! Registrei uma solicitação de agendamento pelo site.','Nome: '+payload.name,'Telefone: '+payload.phone,'Serviço: '+payload.service,'Data desejada: '+payload.date,'Horário desejado: '+payload.time,'Observações: '+(payload.notes||'Não informado'),'Código da solicitação: '+result.id,'','Pode confirmar se há disponibilidade?'].join('\\n');
         window.location.href='https://wa.me/5532988889108?text='+encodeURIComponent(msg);
       } catch(err) {
-        alert('Não foi possível registrar pelo sistema neste momento. Fale diretamente com o salão pelo WhatsApp (32) 98888-9108. Detalhe: '+err.message);
+        const msg=['Olá, Cátia! Estou enviando uma solicitação de agendamento pelo WhatsApp.','Nome: '+payload.name,'Telefone: '+payload.phone,'Serviço: '+payload.service,'Data desejada: '+payload.date,'Horário desejado: '+payload.time,'Observações: '+(payload.notes||'Não informado'),'','Aviso: o sistema online ainda não registrou esta solicitação. Por favor, confirme manualmente pelo WhatsApp.'].join('\\n');
+        window.location.href='https://wa.me/5532988889108?text='+encodeURIComponent(msg);
       } finally {
         button.disabled=false; button.textContent='Enviar solicitação pelo WhatsApp';
       }
