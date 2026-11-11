@@ -60,11 +60,11 @@ export async function onRequest({request, env}) {
     const supplied=cleanText(body.password,200);
     if (supplied.length !== env.ADMIN_PASSWORD.length || supplied !== env.ADMIN_PASSWORD) return json({error:"Senha incorreta."},401);
     const token=await makeSession(env.SESSION_SECRET);
-    return json({ok:true},{headers:{ "set-cookie":COOKIE+"="+token+"; HttpOnly; Secure; SameSite=Strict; Path=/api/admin; Max-Age="+SESSION_SECONDS }});
+    return json({ok:true},200,{ "set-cookie":COOKIE+"="+token+"; HttpOnly; Secure; SameSite=Strict; Path=/api/admin; Max-Age="+SESSION_SECONDS });
   }
   if (path.startsWith("/admin")) {
     if (!(await requireAdmin(request,env))) return json({error:"Acesso não autorizado."},401);
-    if (path === "/admin/logout" && request.method === "POST") return json({ok:true},{headers:{"set-cookie":COOKIE+"=; HttpOnly; Secure; SameSite=Strict; Path=/api/admin; Max-Age=0"}});
+    if (path === "/admin/logout" && request.method === "POST") return json({ok:true},200,{"set-cookie":COOKIE+"=; HttpOnly; Secure; SameSite=Strict; Path=/api/admin; Max-Age=0"});
     if (path === "/admin/appointments" && request.method === "GET") {
       const result=await env.DB.prepare("SELECT a.id,a.customer_name,a.customer_phone,a.starts_at,a.status,a.customer_notes,a.internal_notes,a.created_at,s.name AS service_name FROM appointments a LEFT JOIN services s ON s.id=a.service_id ORDER BY a.starts_at DESC LIMIT 300").all();
       return json({appointments:result.results || []});
