@@ -31,3 +31,11 @@ A pessoa seleciona serviço, data e horário desejados e envia uma solicitação
 ## Segurança e privacidade
 
 Não armazenar senhas em texto puro. O painel deverá usar autenticação segura. Coletar apenas os dados necessários para agendamento e definir política de retenção antes de operar com clientes reais.
+
+## Painel administrativo
+
+Após a implantação e configuração do D1 e dos segredos, o painel ficará em `/admin.html`. A API utiliza sessão em cookie HttpOnly e senha armazenada somente como segredo no ambiente Cloudflare.
+
+## Importante antes de uso real
+
+O formulário público só registra solicitações como pendentes. Ele não garante vaga, não calcula duração e não bloqueia horários. A proprietária deve confirmar cada solicitação. A implementação de disponibilidade automática exige definir expediente, duração e intervalos de cada serviço.
