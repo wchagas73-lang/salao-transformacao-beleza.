@@ -52,6 +52,34 @@ export async function onRequest({request, env}) {
   if (!env.DB) return json({error:"Banco de dados ainda não configurado."},503);
   if (!sameOrigin(request)) return json({error:"Origem não permitida."},403);
   const url = new URL(request.url), path = url.pathname.replace(/^\/api/,"");
+  if (request.method === "GET" && path === "/availability") {
+    const service=cleanText(url.searchParams.get("service"),50);
+    const date=cleanText(url.searchParams.get("date"),10);
+    if (!ALLOWED_SERVICES.has(service) || !/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) return json({error:"Informe serviço e data válidos."},400);
+    const serviceRow=await env.DB.prepare("SELECT duration_minutes,is_active FROM services WHERE id=?").bind(service).first();
+    const hoursRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='weekly_hours'").first();
+    if (!serviceRow || !serviceRow.is_active || !serviceRow.duration_minutes || !hoursRow) return json({configured:false,slots:[]});
+    let weekly; try { weekly=JSON.parse(hoursRow.setting_value); } catch { return json({configured:false,slots:[]}); }
+    const [year,month,day]=date.split("-").map(Number);
+    const dayDate=new Date(Date.UTC(year,month-1,day));
+    if(dayDate.getUTCFullYear()!==year||dayDate.getUTCMonth()!==month-1||dayDate.getUTCDate()!==day) return json({error:"Data inválida."},400);
+    const hours=weekly[String(dayDate.getUTCDay())];
+    if(!hours || !/^\\d{2}:\\d{2}$/.test(hours.open||"") || !/^\\d{2}:\\d{2}$/.test(hours.close||"")) return json({configured:true,slots:[]});
+    const toMin=s=>Number(s.slice(0,2))*60+Number(s.slice(3,5));
+    const open=toMin(hours.open), close=toMin(hours.close);
+    const intervalRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='slot_interval_minutes'").first();
+    const interval=Math.min(120,Math.max(15,Number(intervalRow?.setting_value)||30));
+    const busy=await env.DB.prepare("SELECT starts_at,ends_at FROM appointments WHERE status IN ('requested','confirmed') AND substr(starts_at,1,10)=? UNION ALL SELECT starts_at,ends_at FROM blocked_periods WHERE substr(starts_at,1,10)=?").bind(date,date).all();
+    const busyRanges=(busy.results||[]).map(x=>[Date.parse(x.starts_at),Date.parse(x.ends_at)]).filter(x=>Number.isFinite(x[0])&&Number.isFinite(x[1]));
+    const slots=[];
+    for(let m=open;m+serviceRow.duration_minutes<=close;m+=interval){
+      const hh=String(Math.floor(m/60)).padStart(2,"0"), mm=String(m%60).padStart(2,"0");
+      const start=Date.parse(date+"T"+hh+":"+mm+":00-03:00"), end=start+serviceRow.duration_minutes*60000;
+      if(start<=Date.now()||busyRanges.some(([a,b])=>start<b&&end>a)) continue;
+      slots.push(hh+":"+mm);
+    }
+    return json({configured:true,slots,duration_minutes:serviceRow.duration_minutes});
+  }
   if (request.method === "POST" && path === "/request") {
     let body; try { body=await request.json(); } catch { return json({error:"Dados inválidos."},400); }
     if (!body || typeof body !== "object" || Array.isArray(body)) return json({error:"Dados inválidos."},400);
