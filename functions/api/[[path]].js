@@ -21,12 +21,18 @@ async function makeSession(secret) {
   const payload = b64url(new TextEncoder().encode(JSON.stringify({role:"owner",exp:Math.floor(Date.now()/1000)+SESSION_SECONDS})));
   return payload + "." + await sign(payload,secret);
 }
+async function verify(value, signature, secret) {
+  try {
+    const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), {name:"HMAC",hash:"SHA-256"}, false, ["verify"]);
+    return await crypto.subtle.verify("HMAC",key,fromB64url(signature),new TextEncoder().encode(value));
+  } catch { return false; }
+}
 async function validSession(request, secret) {
   const raw = (request.headers.get("Cookie") || "").split(";").map(v=>v.trim()).find(v=>v.startsWith(COOKIE+"="))?.slice(COOKIE.length+1);
   if (!raw) return false;
-  const [payload, signature] = raw.split(".");
-  if (!payload || !signature || !(await sign(payload,secret)).split("").every((c,i)=>c===signature[i]) || signature.length !== (await sign(payload,secret)).length) return false;
-  try { const data=JSON.parse(new TextDecoder().decode(fromB64url(payload))); return data.role==="owner" && data.exp > Math.floor(Date.now()/1000); } catch { return false; }
+  const [payload, signature, extra] = raw.split(".");
+  if (!payload || !signature || extra || !(await verify(payload,signature,secret))) return false;
+  try { const data=JSON.parse(new TextDecoder().decode(fromB64url(payload))); return data.role==="owner" && Number.isInteger(data.exp) && data.exp > Math.floor(Date.now()/1000); } catch { return false; }
 }
 function sameOrigin(request) {
   const origin = request.headers.get("Origin");
@@ -44,11 +50,15 @@ export async function onRequest({request, env}) {
   const url = new URL(request.url), path = url.pathname.replace(/^\/api/,"");
   if (request.method === "POST" && path === "/request") {
     let body; try { body=await request.json(); } catch { return json({error:"Dados inválidos."},400); }
+    if (!body || typeof body !== "object" || Array.isArray(body)) return json({error:"Dados inválidos."},400);
     const name=cleanText(body.name,100), phone=cleanText(body.phone,30), service=cleanText(body.service,50);
     const date=cleanText(body.date,10), time=cleanText(body.time,5), notes=cleanText(body.notes,500);
-    if (name.length<2 || phone.length<8 || !ALLOWED_SERVICES.has(service) || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return json({error:"Confira os campos obrigatórios."},400);
+    if (name.length<2 || phone.replace(/\D/g,"").length<10 || !ALLOWED_SERVICES.has(service) || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return json({error:"Confira os campos obrigatórios."},400);
+    const [year,month,day]=date.split("-").map(Number), [hour,minute]=time.split(":").map(Number);
+    const candidate = new Date(Date.UTC(year,month-1,day,hour,minute));
+    if (candidate.getUTCFullYear()!==year || candidate.getUTCMonth()!==month-1 || candidate.getUTCDate()!==day || hour>23 || minute>59) return json({error:"Data ou horário inválido."},400);
     const startsAt = date+"T"+time+":00-03:00";
-    if (Number.isNaN(Date.parse(startsAt)) || Date.parse(startsAt) <= Date.now()) return json({error:"Escolha uma data e horário futuros."},400);
+    if (Date.parse(startsAt) <= Date.now()) return json({error:"Escolha uma data e horário futuros."},400);
     const id = crypto.randomUUID();
     await env.DB.prepare("INSERT INTO appointments (id, customer_name, customer_phone, service_id, starts_at, status, customer_notes) VALUES (?, ?, ?, ?, ?, 'requested', ?)")
       .bind(id,name,phone,service,startsAt,notes).run();
