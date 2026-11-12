@@ -114,7 +114,7 @@
         <div class="field"><label for="name">Seu nome</label><input id="name" type="text" placeholder="Nome completo" required></div>
         <div class="field"><label for="phone">Seu telefone</label><input id="phone" type="tel" placeholder="(00) 00000-0000" required></div>
         <div class="field full"><label for="details">Observações (opcional)</label><textarea id="details" rows="3" placeholder="Conte um pouco sobre o que deseja..."></textarea></div>
-      </div><div id="priceNotice" class="notice" hidden></div><p id="depositNotice" class="notice" hidden></p><p class="notice">Seus dados serão usados para responder à solicitação de agendamento. Consulte nossa <a href="privacidade.html" style="color:var(--gold)">política de privacidade</a>. O envio não confirma a reserva. O salão verificará e confirmará o horário.</p><button class="btn" type="submit">Enviar solicitação pelo WhatsApp</button></form>
+      </div><div id="whatsappResult" class="notice" hidden style="border:1px solid #d6b46a;background:#211a10;padding:14px;border-radius:12px"></div><div id="priceNotice" class="notice" hidden></div><p id="depositNotice" class="notice" hidden></p><p class="notice">Seus dados serão usados para responder à solicitação de agendamento. Consulte nossa <a href="privacidade.html" style="color:var(--gold)">política de privacidade</a>. O envio não confirma a reserva. O salão verificará e confirmará o horário.</p><button class="btn" type="submit">Enviar solicitação pelo WhatsApp</button></form>
     </div></section>
   </main>
   <footer><div class="wrap foot"><span>© <span id="year"></span> Transformação e Beleza Hair • Cátia Souza</span><span><a href="privacidade.html">Privacidade</a> · <a href="admin.html">Área da proprietária</a> · Juiz de Fora/MG</span></div></footer>
@@ -249,7 +249,12 @@
         const totalSignal=payload.services.reduce((sum,id)=>{const amount=Number(window.bookingServicePrices[id])||0,percent=Number(window.bookingServicePercents[id]??window.bookingDepositPercent)||0;return sum+Math.round(amount*percent)/100},0);
         const serviceLines=payload.services.map(id=>{const amount=Number(window.bookingServicePrices[id])||0,percent=Number(window.bookingServicePercents[id]??window.bookingDepositPercent)||0,signal=Math.round(amount*percent)/100;return (window.bookingServicesById[id]||id)+' | Valor: '+moneyText(amount)+(percent>0?' | Sinal '+percent+'%: '+moneyText(signal):' | Sem sinal')});
         const msg=['Olá, Cátia! Registrei uma solicitação de agendamento pelo site.','Nome: '+payload.name,'Telefone: '+payload.phone,'Serviços escolhidos:',...serviceLines,'Valor total: '+moneyText(total),'Sinais somados: '+moneyText(totalSignal),'Data desejada: '+payload.date,'Horário desejado: '+payload.time,'Observações: '+(payload.notes||'Não informado'),'Código da solicitação: '+result.id,'','Pode confirmar se há disponibilidade?'].join('\n');
-        window.location.href='https://wa.me/5532999953215?text='+encodeURIComponent(msg);
+        const whatsappUrl='https://wa.me/5532999953215?text='+encodeURIComponent(msg);
+        const resultBox=document.getElementById('whatsappResult');resultBox.hidden=false;resultBox.innerHTML='';
+        const confirmation=document.createElement('p');confirmation.textContent='Sua solicitação foi registrada no sistema. Para avisar o salão, toque no botão abaixo e depois toque em Enviar no WhatsApp.';confirmation.style.cssText='margin:0 0 12px;color:#f5eee3;font:13px/1.5 Arial,sans-serif';
+        const whatsappLink=document.createElement('a');whatsappLink.href=whatsappUrl;whatsappLink.target='_blank';whatsappLink.rel='noopener noreferrer';whatsappLink.textContent='Abrir WhatsApp e enviar solicitação';whatsappLink.style.cssText='display:inline-flex;align-items:center;justify-content:center;padding:12px 16px;border-radius:24px;background:#d6b46a;color:#17120b;font:700 13px Arial,sans-serif;text-decoration:none';
+        resultBox.append(confirmation,whatsappLink);resultBox.scrollIntoView({behavior:'smooth',block:'center'});
+        button.textContent='Solicitação registrada';
       }catch(err){availabilityHint.textContent=err.message||'Não foi possível registrar a solicitação. Tente outro horário.';availabilityHint.scrollIntoView({behavior:'smooth',block:'center'});await loadAvailableSlots();if(timeInput.value)explainSelectedTime()}
       finally{button.disabled=false;button.textContent='Enviar solicitação pelo WhatsApp'}
     });
