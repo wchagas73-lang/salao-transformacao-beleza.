@@ -59,17 +59,15 @@
     .service-catalog{width:100%;min-width:0;grid-template-columns:repeat(auto-fit,minmax(min(100%,155px),1fr))!important}
     .service-catalog button{min-width:0;overflow:hidden;box-shadow:0 12px 25px #0005,inset 0 1px #ffffff18;transition:transform .2s ease,border-color .2s ease}
     .service-catalog button:hover,.service-catalog button:focus-visible{transform:translateY(-3px);border-color:var(--gold)!important}
-    .service-art{height:112px;width:100%;position:relative;overflow:hidden;display:grid;place-items:center;border-radius:10px;background:radial-gradient(circle at 50% 35%,#80613b 0,#39291f 48%,#171311 100%);box-shadow:inset 0 0 28px #0008}
-    .service-art:before,.service-art:after{content:"";position:absolute;border:1px solid #d6b46a66;border-radius:50%;width:76px;height:76px;animation:art-orbit 9s linear infinite}
-    .service-art:after{width:100px;height:100px;border-color:#ffffff20;animation-duration:14s;animation-direction:reverse}
-    .service-art-orb{position:absolute;color:#f4d994;font-size:25px;transform:translate(35px,-27px);text-shadow:0 0 15px #d6b46a;animation:art-float 3s ease-in-out infinite}
-    .service-art-symbol{position:relative;z-index:1;font-size:48px;filter:drop-shadow(0 8px 7px #0009);animation:art-float 3.8s ease-in-out infinite}
+    .service-art{height:112px;width:100%;position:relative;overflow:hidden;display:grid;place-items:center;border-radius:10px;background:radial-gradient(circle at 50% 42%,#30251b 0,#191614 68%,#100e0d 100%);box-shadow:inset 0 0 24px #0009}
+    .service-art:before{content:"";position:absolute;width:82px;height:82px;border:1px solid #d6b46a55;border-radius:50%}
+    .service-art-symbol{position:relative;z-index:1;width:76px;height:76px;color:#d6b46a;filter:drop-shadow(0 3px 5px #0009)}
+    .service-art-symbol svg{width:100%;height:100%;display:block;overflow:visible}
+    .service-art-symbol svg *{vector-effect:non-scaling-stroke}
     .service-catalog button strong{overflow-wrap:anywhere}
     .hero-art{box-shadow:0 20px 50px #0008,inset 0 0 35px #d6b46a12}
     .btn{min-height:46px;touch-action:manipulation}
     input,select,textarea,button{max-width:100%;min-width:0}
-    @keyframes art-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
-    @keyframes art-orbit{to{transform:rotate(360deg)}}
     @media(max-width:760px){
       .wrap{width:calc(100% - 28px)}
       .top{padding:14px 0}.nav{align-items:flex-start;flex-wrap:wrap}.links{width:100%;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.links a{font-size:11px}
@@ -83,7 +81,7 @@
       .actions .btn{flex:1 1 100%}
       .foot{gap:10px}
     }
-    @media(max-width:360px){.services{grid-template-columns:1fr}.links a{font-size:10px}.service-catalog{grid-template-columns:repeat(2,minmax(0,1fr))!important}.service-art{height:82px}}
+    @media(max-width:360px){.services{grid-template-columns:1fr}.links a{font-size:10px}.service-catalog{grid-template-columns:repeat(2,minmax(0,1fr))!important}.service-art{height:82px}.service-art-symbol{width:66px;height:66px}}
     @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition:none!important}}
   </style>
 </head>
@@ -158,7 +156,19 @@
           window.bookingServicesById[service.id]=service.name;
           const option=document.createElement('option');option.value=service.id;option.textContent=service.name;serviceInput.append(option);
           const card=document.createElement('button');card.type='button';card.style.cssText='text-align:left;background:#191614;border:1px solid #59482f;border-radius:14px;padding:10px;color:#f5eee3;cursor:pointer';
-          const art=document.createElement('div');art.className='service-art';art.setAttribute('aria-hidden','true');const symbols={'Mega Hair':'💇🏽‍♀️','Hidratação':'💧','Progressivas':'✨','Corte':'✂️','Escova':'💨','Luzes':'🌟','Relaxamento':'🌿'};const symbol=document.createElement('span');symbol.className='service-art-symbol';symbol.textContent=symbols[service.name]||'✦';const orb=document.createElement('span');orb.className='service-art-orb';orb.textContent='✦';art.append(orb,symbol);
+          const art=document.createElement('div');art.className='service-art';art.setAttribute('aria-hidden','true');
+          const illustrations={
+            'mega hair':'<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M28 17c-13 13-10 36-4 54 3 9 8 15 14 18M39 13c-10 15-7 33-1 48 4 10 8 17 15 25M50 12c-7 16-3 34 3 48 5 12 10 19 17 25M61 15c-4 15 1 31 7 43 5 10 10 17 17 22M72 22c0 12 5 24 11 34 4 7 8 12 12 16"/><path d="M24 27c8-10 19-15 31-15 12 0 22 5 29 15" opacity=".7"/></svg>',
+            'hidratação':'<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M50 12C39 29 25 43 25 59a25 25 0 0 0 50 0c0-16-14-30-25-47Z"/><path d="M37 61c2 9 8 14 17 15M48 39c-5 8-9 14-9 21"/><path d="M18 28c-5 9-7 18-6 27M82 28c5 9 7 18 6 27" opacity=".65"/></svg>',
+            'luzes':'<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 82c9-18 5-37 14-54M36 87c8-17 8-36 17-59M51 88c7-16 12-34 18-51M66 86c7-13 13-26 18-38"/><path d="m69 13 3 7 7 3-7 3-3 7-3-7-7-3 7-3 3-7Z"/><path d="m31 18 2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5Z" opacity=".8"/></svg>',
+            'corte':'<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="25" cy="72" r="10"/><circle cx="47" cy="82" r="9"/><path d="m32 66 47-48M53 76 80 18M33 69l19 7M30 65l-5-17M49 79l-5-17"/><path d="M70 25c-8 8-13 18-16 29" opacity=".65"/></svg>',
+            'escova':'<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 28c18-9 34-7 47 4 11 9 16 22 16 42M18 42c15-7 28-5 39 4 9 8 13 18 13 31M18 56c11-4 21-2 29 5 6 5 9 12 9 20"/><path d="M22 18c8-5 17-7 27-6M76 17l8 8-8 8M13 71l8 8-8 8"/></svg>',
+            'progressivas':'<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M25 13c-4 20-3 47 0 75M39 11c-2 21-1 52 1 77M53 11c0 22 1 52 2 77M67 13c2 20 3 48 5 74"/><path d="M17 25h58M17 50h61M19 75h60" opacity=".55"/><path d="m80 21 5 5 9-11"/></svg>',
+            'relaxamento':'<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 16c-13 12 13 19 0 32s13 20 0 35M42 12c-13 14 13 21 0 36s13 21 0 39M61 13c-13 14 13 21 0 36s13 21 0 39M80 19c-12 12 12 19 0 32s12 20 0 32"/><path d="M14 88c21-7 50-7 72 0" opacity=".65"/></svg>'
+          };
+          const symbol=document.createElement('span');symbol.className='service-art-symbol';
+          const key=service.name.toLocaleLowerCase('pt-BR');symbol.innerHTML=illustrations[key]||'<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M22 80c10-25 10-43 28-60 18 17 18 35 28 60M31 69c13-11 25-11 38 0"/></svg>';
+          art.append(symbol);
           const title=document.createElement('strong');title.textContent=service.name;title.style.cssText='display:block;margin-top:9px;font-size:14px';
           const price=document.createElement('span');price.textContent=money(window.bookingServicePrices[service.id]);price.style.cssText='display:block;margin-top:5px;color:#d6b46a;font-size:13px';
           const p=Number(window.bookingServicePercents[service.id]??percent)||0,amount=Number(window.bookingServicePrices[service.id])||0;
