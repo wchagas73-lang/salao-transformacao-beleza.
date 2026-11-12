@@ -1,6 +1,5 @@
 const COOKIE = "salon_admin";
 const SESSION_SECONDS = 60 * 60 * 24 * 30;
-const ALLOWED_SERVICES = new Set(["Mega Hair","Hidratação","Progressivas","Corte","Escova","Luzes","Relaxamento"]);
 const DEFAULT_SERVICE_PRICES = {"Mega Hair":300,"Hidratação":100,"Progressivas":220,"Corte":70,"Escova":60,"Luzes":350,"Relaxamento":150};
 
 function json(data, status = 200, headers = {}) {
@@ -56,12 +55,12 @@ export async function onRequest({request, env}) {
   if (request.method === "GET" && path === "/booking-settings") {
     const row=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='deposit_percent'").first();
     const value=Number(row?.setting_value)||0;
-    const pricesRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='service_prices'").first();let servicePrices=DEFAULT_SERVICE_PRICES;try{if(pricesRow?.setting_value)servicePrices={...DEFAULT_SERVICE_PRICES,...JSON.parse(pricesRow.setting_value)}}catch{};return json({deposit_percent:Number.isInteger(value)&&value>=0&&value<=100?value:0,service_prices:servicePrices});
+    const pricesRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='service_prices'").first();let servicePrices=DEFAULT_SERVICE_PRICES;try{if(pricesRow?.setting_value)servicePrices={...DEFAULT_SERVICE_PRICES,...JSON.parse(pricesRow.setting_value)}}catch{};const services=await env.DB.prepare("SELECT id,name FROM services WHERE is_active=1 ORDER BY display_order,name").all();return json({deposit_percent:Number.isInteger(value)&&value>=0&&value<=100?value:0,service_prices:servicePrices,services:services.results||[]});
   }
   if (request.method === "GET" && path === "/availability") {
     const service=cleanText(url.searchParams.get("service"),50);
     const date=cleanText(url.searchParams.get("date"),10);
-    if (!ALLOWED_SERVICES.has(service) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return json({error:"Informe serviço e data válidos."},400);
+    if (!service || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return json({error:"Informe serviço e data válidos."},400);
     const serviceRow=await env.DB.prepare("SELECT duration_minutes,is_active FROM services WHERE id=?").bind(service).first();
     const hoursRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='weekly_hours'").first();
     if (!serviceRow || !serviceRow.is_active || !serviceRow.duration_minutes || !hoursRow) return json({configured:false,slots:[]});
@@ -182,13 +181,36 @@ export async function onRequest({request, env}) {
       if(!result.meta?.changes) return json({error:"Bloqueio não encontrado."},404);
       return json({ok:true});
     }
-    if (path === "/admin/config" && request.method === "GET") {
+    
+    if(path==="/admin/services" && request.method==="POST"){
+      let body;try{body=await request.json()}catch{return json({error:"Dados inválidos."},400)}
+      const name=cleanText(body?.name,80),duration=Number(body?.duration_minutes)||60;
+      if(name.length<2)return json({error:"Informe um nome de serviço válido."},400);
+      if(!Number.isInteger(duration)||duration<1||duration>720)return json({error:"A duração deve ficar entre 1 e 720 minutos."},400);
+      const duplicate=await env.DB.prepare("SELECT id FROM services WHERE lower(name)=lower(?)").bind(name).first();
+      if(duplicate)return json({error:"Já existe um serviço com esse nome."},409);
+      const id=crypto.randomUUID(),order=await env.DB.prepare("SELECT COALESCE(MAX(display_order),0)+1 AS next FROM services").first();
+      await env.DB.prepare("INSERT INTO services(id,name,duration_minutes,is_active,display_order) VALUES(?,?,?,1,?)").bind(id,name,duration,Number(order?.next)||1).run();
+      return json({ok:true,service:{id,name,duration_minutes:duration,is_active:1}},201);
+    }
+    if(path.startsWith("/admin/services/") && request.method==="PATCH"){
+      const id=path.split("/").pop();let body;try{body=await request.json()}catch{return json({error:"Dados inválidos."},400)}
+      const current=await env.DB.prepare("SELECT id FROM services WHERE id=?").bind(id).first();if(!current)return json({error:"Serviço não encontrado."},404);
+      const updates=[];
+      if(body.name!==undefined){const name=cleanText(body.name,80);if(name.length<2)return json({error:"Nome inválido."},400);const duplicate=await env.DB.prepare("SELECT id FROM services WHERE lower(name)=lower(?) AND id<>?").bind(name,id).first();if(duplicate)return json({error:"Já existe outro serviço com esse nome."},409);updates.push(env.DB.prepare("UPDATE services SET name=? WHERE id=?").bind(name,id))}
+      if(body.is_active!==undefined){if(typeof body.is_active!=="boolean")return json({error:"Disponibilidade inválida."},400);updates.push(env.DB.prepare("UPDATE services SET is_active=? WHERE id=?").bind(body.is_active?1:0,id))}
+      if(body.duration_minutes!==undefined){const duration=Number(body.duration_minutes);if(!Number.isInteger(duration)||duration<1||duration>720)return json({error:"A duração deve ficar entre 1 e 720 minutos."},400);updates.push(env.DB.prepare("UPDATE services SET duration_minutes=? WHERE id=?").bind(duration,id))}
+      if(!updates.length)return json({error:"Nenhuma alteração informada."},400);
+      await env.DB.batch(updates);return json({ok:true});
+    }
+if (path === "/admin/config" && request.method === "GET") {
       const [services,settings]=await Promise.all([
         env.DB.prepare("SELECT id,name,duration_minutes,is_active FROM services ORDER BY display_order").all(),
         env.DB.prepare("SELECT setting_key,setting_value FROM salon_settings").all()
       ]);
       const config={}; for(const row of settings.results||[]){try{config[row.setting_key]=JSON.parse(row.setting_value)}catch{config[row.setting_key]=row.setting_value}}
       config.service_prices={...DEFAULT_SERVICE_PRICES,...(config.service_prices||{})};
+      config.service_deposit_percents=config.service_deposit_percents||{};
       return json({services:services.results||[],settings:config});
     }
     if (path === "/admin/config" && request.method === "PUT") {
@@ -205,18 +227,19 @@ export async function onRequest({request, env}) {
       const depositPercent=body.deposit_percent===undefined?0:Number(body.deposit_percent);
       const servicePrices=body.service_prices===undefined?{}:body.service_prices;
       if(!servicePrices||typeof servicePrices!=='object'||Array.isArray(servicePrices)) return json({error:'Informe preços válidos para os serviços.'},400);
-      for(const [service,price] of Object.entries(servicePrices)){if(!ALLOWED_SERVICES.has(service)||!Number.isFinite(Number(price))||Number(price)<0||Number(price)>100000) return json({error:'Confira os preços dos serviços. Use valores entre R$ 0 e R$ 100.000.'},400)}
+      const serviceIds=(await env.DB.prepare("SELECT id FROM services").all()).results||[];const validServiceIds=new Set(serviceIds.map(s=>s.id));for(const [service,price] of Object.entries(servicePrices)){if(!validServiceIds.has(service)||!Number.isFinite(Number(price))||Number(price)<0||Number(price)>100000) return json({error:'Confira os preços dos serviços. Use valores entre R$ 0 e R$ 100.000.'},400)}
       if(!Number.isInteger(depositPercent)||depositPercent<0||depositPercent>100) return json({error:"O sinal deve ser um percentual inteiro entre 0 e 100."},400);
       const interval=Number(body.slot_interval_minutes);
       if(![15,30,60].includes(interval)) return json({error:"Intervalo entre opções inválido."},400);
       const statements=[
         env.DB.prepare("INSERT INTO salon_settings(setting_key,setting_value,updated_at) VALUES('deposit_percent',?,CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO UPDATE SET setting_value=excluded.setting_value,updated_at=CURRENT_TIMESTAMP").bind(String(depositPercent)),
         env.DB.prepare("INSERT INTO salon_settings(setting_key,setting_value,updated_at) VALUES('service_prices',?,CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO UPDATE SET setting_value=excluded.setting_value,updated_at=CURRENT_TIMESTAMP").bind(JSON.stringify(servicePrices)),
+        env.DB.prepare("INSERT INTO salon_settings(setting_key,setting_value,updated_at) VALUES('service_deposit_percents','{}',CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO NOTHING"),
         env.DB.prepare("INSERT INTO salon_settings(setting_key,setting_value,updated_at) VALUES('weekly_hours',?,CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO UPDATE SET setting_value=excluded.setting_value,updated_at=CURRENT_TIMESTAMP").bind(JSON.stringify(body.weekly_hours)),
         env.DB.prepare("INSERT INTO salon_settings(setting_key,setting_value,updated_at) VALUES('slot_interval_minutes',?,CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO UPDATE SET setting_value=excluded.setting_value,updated_at=CURRENT_TIMESTAMP").bind(String(interval))
       ];
       for(const [service,duration] of Object.entries(body.durations)){
-        if(!ALLOWED_SERVICES.has(service)) return json({error:"Serviço inválido."},400);
+        if(!validServiceIds.has(service)) return json({error:"Serviço inválido."},400);
         if(duration!==null && (!Number.isInteger(duration)||duration<1||duration>720)) return json({error:"Informe uma duração válida entre 1 e 720 minutos."},400);
         statements.push(env.DB.prepare("UPDATE services SET duration_minutes=? WHERE id=?").bind(duration,service));
       }
