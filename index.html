@@ -97,10 +97,11 @@
     document.getElementById('year').textContent=new Date().getFullYear();
     window.bookingDepositPercent=0;
     window.bookingServicePrices={};
+    window.bookingServicePercents={};
     window.bookingServicesById={};
     const money=value=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(value)||0);
     function updateSelectedPrice(){
-      const service=serviceInput.value, price=Number(window.bookingServicePrices[service]||0), percent=Number(window.bookingDepositPercent)||0;
+      const service=serviceInput.value, price=Number(window.bookingServicePrices[service]||0), percent=Number(window.bookingServicePercents[service]??window.bookingDepositPercent)||0;
       const box=document.getElementById('priceNotice');
       if(!service||!price){box.hidden=true;box.textContent='';return}
       const signal=Math.round(price*percent)/100, remaining=price-signal;
@@ -113,7 +114,7 @@
         const response=await fetch('/api/booking-settings',{cache:'no-store'});
         if(!response.ok)return;
         const settings=await response.json();
-        const percent=Number(settings.deposit_percent)||0;window.bookingDepositPercent=percent;window.bookingServicePrices=settings.service_prices||{};window.bookingServicesById={};serviceInput.innerHTML='<option value="">Selecione um serviço</option>';(settings.services||[]).forEach(service=>{window.bookingServicesById[service.id]=service.name;const option=document.createElement('option');option.value=service.id;option.textContent=service.name;serviceInput.append(option)});updateSelectedPrice();
+        const percent=Number(settings.deposit_percent)||0;window.bookingDepositPercent=percent;window.bookingServicePrices=settings.service_prices||{};window.bookingServicePercents=settings.service_deposit_percents||{};window.bookingServicesById={};serviceInput.innerHTML='<option value="">Selecione um serviço</option>';(settings.services||[]).forEach(service=>{window.bookingServicesById[service.id]=service.name;const option=document.createElement('option');option.value=service.id;option.textContent=service.name;serviceInput.append(option)});updateSelectedPrice();
         if(percent>0){notice.hidden=false;notice.textContent='Para confirmar o agendamento, é necessário pagar um sinal de '+percent+'% do valor do serviço. Após a solicitação, envie o comprovante pelo WhatsApp. O horário só será confirmado pelo salão após a conferência.'}
         else{notice.hidden=true;notice.textContent=''}
       }catch{notice.hidden=true}
@@ -170,7 +171,7 @@
         const response=await fetch('/api/request',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
         const result=await response.json();
         if(!response.ok) throw new Error(result.error||'Não foi possível registrar a solicitação.');
-        const msg=['Olá, Cátia! Registrei uma solicitação de agendamento pelo site.','Nome: '+payload.name,'Telefone: '+payload.phone,'Serviço: '+(window.bookingServicesById[payload.service]||payload.service),'Data desejada: '+payload.date,'Horário desejado: '+payload.time,'Observações: '+(payload.notes||'Não informado'),'Código da solicitação: '+result.id,'','Pode confirmar se há disponibilidade?','Valor demonstrativo do serviço: '+new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(window.bookingServicePrices[payload.service])||0),...(window.bookingDepositPercent>0?['Sinal de '+window.bookingDepositPercent+'%: '+new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Math.round((Number(window.bookingServicePrices[payload.service])||0)*window.bookingDepositPercent)/100),'Restante: '+new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format((Number(window.bookingServicePrices[payload.service])||0)-Math.round((Number(window.bookingServicePrices[payload.service])||0)*window.bookingDepositPercent)/100),'Após realizar o pagamento do sinal, vou enviar o comprovante nesta conversa.']:[]) ].join('\n');
+        const msg=['Olá, Cátia! Registrei uma solicitação de agendamento pelo site.','Nome: '+payload.name,'Telefone: '+payload.phone,'Serviço: '+(window.bookingServicesById[payload.service]||payload.service),'Data desejada: '+payload.date,'Horário desejado: '+payload.time,'Observações: '+(payload.notes||'Não informado'),'Código da solicitação: '+result.id,'','Pode confirmar se há disponibilidade?','Valor demonstrativo do serviço: '+new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(window.bookingServicePrices[payload.service])||0),...((Number(window.bookingServicePercents[payload.service]??window.bookingDepositPercent)||0)>0?['Sinal de '+(Number(window.bookingServicePercents[payload.service]??window.bookingDepositPercent)||0)+'%: '+new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Math.round((Number(window.bookingServicePrices[payload.service])||0)*(Number(window.bookingServicePercents[payload.service]??window.bookingDepositPercent)||0))/100),'Restante: '+new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format((Number(window.bookingServicePrices[payload.service])||0)-Math.round((Number(window.bookingServicePrices[payload.service])||0)*(Number(window.bookingServicePercents[payload.service]??window.bookingDepositPercent)||0))/100),'Após realizar o pagamento do sinal, vou enviar o comprovante nesta conversa.']:[]) ].join('\n');
         window.location.href='https://wa.me/5532999953215?text='+encodeURIComponent(msg);
       } catch(err) {
         availabilityHint.textContent=err.message||'Não foi possível registrar a solicitação. Tente outro horário.';
