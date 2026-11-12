@@ -66,8 +66,8 @@ export async function onRequest({request, env}) {
     if((rows.results||[]).length!==serviceIds.length || (rows.results||[]).some(x=>!x.is_active)) return json({error:"Um dos serviços não está disponível."},400);
     const duration=(rows.results||[]).reduce((sum,x)=>sum+(Number(x.duration_minutes)||60),0);
     const hoursRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='weekly_hours'").first();
-    if(!hoursRow) return json({configured:false,slots:[],duration_minutes:duration});
-    let weekly; try { weekly=JSON.parse(hoursRow.setting_value); } catch { return json({configured:false,slots:[],duration_minutes:duration}); }
+    const defaultWeekly={"0":null,"1":{open:"09:00",close:"19:00"},"2":{open:"09:00",close:"19:00"},"3":{open:"09:00",close:"19:00"},"4":{open:"09:00",close:"19:00"},"5":{open:"09:00",close:"19:00"},"6":{open:"09:00",close:"19:00"}};
+    let weekly=defaultWeekly; try { if(hoursRow?.setting_value) weekly=JSON.parse(hoursRow.setting_value); } catch { weekly=defaultWeekly; }
     const [year,month,day]=date.split("-").map(Number), dayDate=new Date(Date.UTC(year,month-1,day));
     if(dayDate.getUTCFullYear()!==year||dayDate.getUTCMonth()!==month-1||dayDate.getUTCDate()!==day) return json({error:"Data inválida."},400);
     const hours=weekly[String(dayDate.getUTCDay())];
@@ -112,9 +112,10 @@ export async function onRequest({request, env}) {
     const primary=ordered[0],serviceNames=ordered.map(x=>x.name),id=crypto.randomUUID();
     const storedNotes="[[SERVICES:"+JSON.stringify(serviceNames)+"]]"+(notes?" | Observações: "+notes:"");
     const hoursRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='weekly_hours'").first();
+    const defaultWeekly={"0":null,"1":{open:"09:00",close:"19:00"},"2":{open:"09:00",close:"19:00"},"3":{open:"09:00",close:"19:00"},"4":{open:"09:00",close:"19:00"},"5":{open:"09:00",close:"19:00"},"6":{open:"09:00",close:"19:00"}};
+    let weekly=defaultWeekly;try{if(hoursRow?.setting_value)weekly=JSON.parse(hoursRow.setting_value)}catch{weekly=defaultWeekly}
     let endsAt=null;
-    if(hoursRow){
-      let weekly;try{weekly=JSON.parse(hoursRow.setting_value)}catch{weekly=null}
+    {
       const weekday=new Date(Date.UTC(year,month-1,day)).getUTCDay(),hours=weekly&&weekly[String(weekday)];
       if(!hours)return json({error:"O salão não atende neste dia. Escolha outra data."},409);
       const toMin=s=>Number(s.slice(0,2))*60+Number(s.slice(3,5)),startMin=hour*60+minute,endEpoch=Date.parse(startsAt)+duration*60000;
