@@ -1,45 +1,63 @@
 # Transformação e Beleza Hair
 
-Projeto de cliente desenvolvido pela **Arcany Digital**.
+Sistema de apresentação e solicitação de agendamentos para o salão Transformação e Beleza Hair, de Cátia Souza, em Juiz de Fora/MG. Projeto desenvolvido e comercializado pela **Arcany Digital**, com repositório e infraestrutura independentes dos demais clientes.
 
-Site de apresentação e solicitação de agendamento para o salão de Cátia Souza, em Juiz de Fora/MG.
+## Funcionalidades implementadas no código
 
-## Estrutura atual
+- Site público responsivo com apresentação do salão e catálogo de serviços.
+- Formulário para solicitar agendamento.
+- API em Cloudflare Pages Functions.
+- Banco preparado para Cloudflare D1.
+- Painel administrativo com autenticação por senha e sessão protegida.
+- Gestão de solicitações e status.
+- Configuração de dias e horários de atendimento.
+- Configuração da duração dos serviços e intervalo entre horários.
+- Bloqueio de períodos na agenda.
+- Consulta de horários sugeridos e validação de conflitos no servidor.
+- Política de privacidade.
+- Validação automática de código e schema pelo GitHub Actions.
 
-- `index.html`: primeira versão demonstrativa responsiva.
-- `database/schema.sql`: estrutura inicial preparada para Cloudflare D1, ainda não conectada ao site.
+## Serviços cadastrados
 
-## Demonstração atual
-
-A pessoa seleciona serviço, data e horário desejados e envia uma solicitação pré-preenchida ao WhatsApp do salão. **O envio não confirma reserva nem consulta disponibilidade real.**
-
-## Próximas etapas
-
-1. Confirmar com a proprietária horários de funcionamento, duração de cada serviço, intervalos e regras de cancelamento/remarcação.
-2. Criar backend com Cloudflare Workers e conectar o banco D1.
-3. Implementar validação de conflitos de horários no servidor para impedir reservas simultâneas.
-4. Criar painel administrativo protegido para a proprietária.
-5. Publicar pelo Cloudflare Pages e testar em celular e computador.
+Mega Hair, Hidratação, Progressivas, Corte, Escova, Luzes e Relaxamento.
 
 ## Dados do salão
 
 - Nome: Transformação e Beleza Hair
 - Responsável: Cátia Souza
 - WhatsApp: (32) 98888-9108
-- Endereço: Av. 7 de Setembro, 865, Condomínio Edifício Solar Paraíbuna (Galeria), Juiz de Fora/MG
+- Endereço: Av. 7 de Setembro, 865, Condomínio Edifício Solar Paraíbuna (Galeria), Juiz de Fora/MG.
 
-## Segurança e privacidade
+## Como funciona a confirmação
 
-Não armazenar senhas em texto puro. O painel deverá usar autenticação segura. Coletar apenas os dados necessários para agendamento e definir política de retenção antes de operar com clientes reais.
+Uma solicitação enviada pelo site é registrada como **solicitada**. Ela não representa uma reserva confirmada. A Cátia deverá analisar a agenda e confirmar manualmente com a cliente.
 
-## Painel administrativo
+Os horários sugeridos dependem da configuração do expediente, da duração de cada serviço e do intervalo entre opções no painel administrativo.
 
-Após a implantação e configuração do D1 e dos segredos, o painel ficará em `/admin.html`. A API utiliza sessão em cookie HttpOnly e senha armazenada somente como segredo no ambiente Cloudflare.
+## Estrutura do repositório
 
-## Importante antes de uso real
+- `index.html`: site público.
+- `admin.html`: painel administrativo.
+- `privacidade.html`: política de privacidade.
+- `functions/api/[[path]].js`: API.
+- `functions/_middleware.js`: cabeçalhos de segurança para respostas das Functions.
+- `_headers`: cabeçalhos de segurança para páginas estáticas.
+- `database/schema.sql`: estrutura do banco D1.
+- `scripts/validate.py`: verificações locais de sintaxe e schema.
+- `.github/workflows/validate.yml`: validação automática no GitHub Actions.
+- `DEPLOY.md`: instruções de publicação.
 
-O formulário público só registra solicitações como pendentes. Ele não garante vaga, não calcula duração e não bloqueia horários. A proprietária deve confirmar cada solicitação. A implementação de disponibilidade automática exige definir expediente, duração e intervalos de cada serviço.
+## Publicação
 
-## Configuração da agenda
+A publicação planejada utiliza GitHub + Cloudflare Pages + Cloudflare D1. O projeto ainda depende da conexão do repositório à Cloudflare, da criação do banco, do binding `DB` e dos secrets `ADMIN_PASSWORD` e `SESSION_SECRET`.
 
-No painel administrativo, a proprietária pode definir dias e horários de atendimento, duração de cada serviço e intervalo entre opções. Quando o serviço e o expediente estiverem configurados, o site consulta horários sugeridos e a API valida conflitos antes de registrar a solicitação. Toda solicitação continua pendente até confirmação manual.
+Consulte [DEPLOY.md](DEPLOY.md) para o procedimento completo.
+
+## Segurança
+
+- Senha administrativa e segredo de sessão devem ser cadastrados como Secrets no ambiente Cloudflare.
+- Nunca incluir credenciais no código-fonte.
+- O painel exige sessão válida.
+- O backend valida dados e conflitos de horário.
+- Solicitações permanecem pendentes até confirmação manual.
+- Antes de operar com clientes reais, testar o fluxo completo e estabelecer rotina de backup e retenção de dados.
