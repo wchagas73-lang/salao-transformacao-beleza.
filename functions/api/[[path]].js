@@ -58,84 +58,78 @@ export async function onRequest({request, env}) {
     const pricesRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='service_prices'").first();let servicePrices=DEFAULT_SERVICE_PRICES;try{if(pricesRow?.setting_value)servicePrices={...DEFAULT_SERVICE_PRICES,...JSON.parse(pricesRow.setting_value)}}catch{};const percentsRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='service_deposit_percents'").first();let servicePercents={};try{servicePercents=JSON.parse(percentsRow?.setting_value||'{}')}catch{};const services=await env.DB.prepare("SELECT id,name FROM services WHERE is_active=1 ORDER BY display_order,name").all();const publicServices=services.results||[];const pricesById={};for(const s of publicServices)pricesById[s.id]=Number(servicePrices[s.id]??servicePrices[s.name]??DEFAULT_SERVICE_PRICES[s.name]??0);return json({deposit_percent:Number.isInteger(value)&&value>=0&&value<=100?value:0,service_prices:pricesById,service_deposit_percents:servicePercents,services:publicServices});
   }
   if (request.method === "GET" && path === "/availability") {
-    const service=cleanText(url.searchParams.get("service"),50);
+    const idsRaw=cleanText(url.searchParams.get("services")||url.searchParams.get("service"),400);
+    const serviceIds=[...new Set(idsRaw.split(",").map(x=>cleanText(x,50)).filter(Boolean))].slice(0,7);
     const date=cleanText(url.searchParams.get("date"),10);
-    if (!service || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return json({error:"Informe serviço e data válidos."},400);
-    const serviceRow=await env.DB.prepare("SELECT duration_minutes,is_active FROM services WHERE id=?").bind(service).first();
+    if (!serviceIds.length || !/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) return json({error:"Informe serviços e data válidos."},400);
+    const rows=await env.DB.prepare("SELECT id,duration_minutes,is_active FROM services WHERE id IN ("+serviceIds.map(()=>"?").join(",")+")").bind(...serviceIds).all();
+    if((rows.results||[]).length!==serviceIds.length || (rows.results||[]).some(x=>!x.is_active)) return json({error:"Um dos serviços não está disponível."},400);
+    const duration=(rows.results||[]).reduce((sum,x)=>sum+(Number(x.duration_minutes)||60),0);
     const hoursRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='weekly_hours'").first();
-    if (!serviceRow || !serviceRow.is_active || !serviceRow.duration_minutes || !hoursRow) return json({configured:false,slots:[]});
-    let weekly; try { weekly=JSON.parse(hoursRow.setting_value); } catch { return json({configured:false,slots:[]}); }
-    const [year,month,day]=date.split("-").map(Number);
-    const dayDate=new Date(Date.UTC(year,month-1,day));
+    if(!hoursRow) return json({configured:false,slots:[],duration_minutes:duration});
+    let weekly; try { weekly=JSON.parse(hoursRow.setting_value); } catch { return json({configured:false,slots:[],duration_minutes:duration}); }
+    const [year,month,day]=date.split("-").map(Number), dayDate=new Date(Date.UTC(year,month-1,day));
     if(dayDate.getUTCFullYear()!==year||dayDate.getUTCMonth()!==month-1||dayDate.getUTCDate()!==day) return json({error:"Data inválida."},400);
     const hours=weekly[String(dayDate.getUTCDay())];
-    if(!hours || !/^\d{2}:\d{2}$/.test(hours.open||"") || !/^\d{2}:\d{2}$/.test(hours.close||"")) return json({configured:true,slots:[]});
-    const toMin=s=>Number(s.slice(0,2))*60+Number(s.slice(3,5));
-    const open=toMin(hours.open), close=toMin(hours.close);
+    if(!hours || !/^\\d{2}:\\d{2}$/.test(hours.open||"") || !/^\\d{2}:\\d{2}$/.test(hours.close||"")) return json({configured:true,slots:[],duration_minutes:duration});
+    const toMin=s=>Number(s.slice(0,2))*60+Number(s.slice(3,5)),open=toMin(hours.open),close=toMin(hours.close);
     const intervalRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='slot_interval_minutes'").first();
     const interval=Math.min(120,Math.max(15,Number(intervalRow?.setting_value)||30));
-    const dayStart=date+"T00:00:00-03:00";
-    const nextDay=new Date(Date.UTC(year,month-1,day+1)).toISOString().slice(0,10);
-    const dayEnd=nextDay+"T00:00:00-03:00";
+    const dayStart=date+"T00:00:00-03:00",nextDay=new Date(Date.UTC(year,month-1,day+1)).toISOString().slice(0,10),dayEnd=nextDay+"T00:00:00-03:00";
     const busy=await env.DB.prepare("SELECT starts_at,ends_at FROM appointments WHERE status IN ('requested','confirmed') AND starts_at < ? AND (ends_at > ? OR (ends_at IS NULL AND starts_at >= ?))").bind(dayEnd,dayStart,dayStart).all();
     const blocked=await env.DB.prepare("SELECT starts_at,ends_at,reason FROM blocked_periods WHERE starts_at < ? AND ends_at > ? ORDER BY starts_at").bind(dayEnd,dayStart).all();
     const blockedPeriods=(blocked.results||[]).map(x=>({starts_at:x.starts_at,ends_at:x.ends_at,reason:x.reason||""}));
     const busyRanges=[...(busy.results||[]),...blockedPeriods].map(x=>{const start=Date.parse(x.starts_at),end=x.ends_at?Date.parse(x.ends_at):start+1;return [start,end]}).filter(x=>Number.isFinite(x[0])&&Number.isFinite(x[1]));
     const slots=[];
-    for(let m=open;m+serviceRow.duration_minutes<=close;m+=interval){
-      const hh=String(Math.floor(m/60)).padStart(2,"0"), mm=String(m%60).padStart(2,"0");
-      const start=Date.parse(date+"T"+hh+":"+mm+":00-03:00"), end=start+serviceRow.duration_minutes*60000;
-      if(start<=Date.now()||busyRanges.some(([a,b])=>start<b&&end>a)) continue;
+    for(let m=open;m+duration<=close;m+=interval){
+      const hh=String(Math.floor(m/60)).padStart(2,"0"),mm=String(m%60).padStart(2,"0"),start=Date.parse(date+"T"+hh+":"+mm+":00-03:00"),end=start+duration*60000;
+      if(start<=Date.now()||busyRanges.some(([a,b])=>start<b&&end>a))continue;
       slots.push(hh+":"+mm);
     }
-    return json({configured:true,slots,duration_minutes:serviceRow.duration_minutes,blocked_periods:blockedPeriods});
+    return json({configured:true,slots,duration_minutes:duration,blocked_periods:blockedPeriods});
   }
   if (request.method === "POST" && path === "/request") {
-    let body; try { body=await request.json(); } catch { return json({error:"Dados inválidos."},400); }
-    if (!body || typeof body !== "object" || Array.isArray(body)) return json({error:"Dados inválidos."},400);
-    const name=cleanText(body.name,100), phone=cleanText(body.phone,30), service=cleanText(body.service,50);
-    const date=cleanText(body.date,10), time=cleanText(body.time,5), notes=cleanText(body.notes,500);
-    if (name.length<2 || phone.replace(/\D/g,"").length<10 || !service || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return json({error:"Confira os campos obrigatórios."},400);
-    const [year,month,day]=date.split("-").map(Number), [hour,minute]=time.split(":").map(Number);
-    const candidate = new Date(Date.UTC(year,month-1,day,hour,minute));
-    if (candidate.getUTCFullYear()!==year || candidate.getUTCMonth()!==month-1 || candidate.getUTCDate()!==day || hour>23 || minute>59) return json({error:"Data ou horário inválido."},400);
-    const startsAt = date+"T"+time+":00-03:00";
-    if (Date.parse(startsAt) <= Date.now()) return json({error:"Escolha uma data e horário futuros."},400);
+    let body;try{body=await request.json()}catch{return json({error:"Dados inválidos."},400)}
+    if(!body||typeof body!=="object"||Array.isArray(body))return json({error:"Dados inválidos."},400);
+    const name=cleanText(body.name,100),phone=cleanText(body.phone,30),date=cleanText(body.date,10),time=cleanText(body.time,5),notes=cleanText(body.notes,500);
+    const requested=Array.isArray(body.services)?body.services:[body.service];
+    const serviceIds=[...new Set(requested.map(x=>cleanText(x,50)).filter(Boolean))].slice(0,7);
+    if(name.length<2||phone.replace(/\\D/g,"").length<10||!serviceIds.length||!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)||!/^\\d{2}:\\d{2}$/.test(time))return json({error:"Confira os campos obrigatórios e selecione ao menos um serviço."},400);
+    const [year,month,day]=date.split("-").map(Number),[hour,minute]=time.split(":").map(Number),candidate=new Date(Date.UTC(year,month-1,day,hour,minute));
+    if(candidate.getUTCFullYear()!==year||candidate.getUTCMonth()!==month-1||candidate.getUTCDate()!==day||hour>23||minute>59)return json({error:"Data ou horário inválido."},400);
+    const startsAt=date+"T"+time+":00-03:00";
+    if(Date.parse(startsAt)<=Date.now())return json({error:"Escolha uma data e horário futuros."},400);
     const requestIpHash=await hashValue(request.headers.get("CF-Connecting-IP")||"unknown");
     const recentRequests=await env.DB.prepare("SELECT COUNT(*) AS total FROM booking_request_attempts WHERE ip_hash=? AND attempted_at >= datetime('now','-1 hour')").bind(requestIpHash).first();
-    if((recentRequests?.total||0)>=10) return json({error:"Muitas solicitações em pouco tempo. Tente novamente mais tarde."},429);
+    if((recentRequests?.total||0)>=10)return json({error:"Muitas solicitações em pouco tempo. Tente novamente mais tarde."},429);
     await env.DB.prepare("INSERT INTO booking_request_attempts(ip_hash) VALUES(?)").bind(requestIpHash).run();
     await env.DB.prepare("DELETE FROM booking_request_attempts WHERE attempted_at < datetime('now','-1 day')").run();
-    const id = crypto.randomUUID();
-    const serviceRow=await env.DB.prepare("SELECT duration_minutes,is_active FROM services WHERE id=?").bind(service).first();
-    if(!serviceRow || !serviceRow.is_active) return json({error:"Este serviço não está disponível no momento."},400);
+    const rows=await env.DB.prepare("SELECT id,name,duration_minutes,is_active FROM services WHERE id IN ("+serviceIds.map(()=>"?").join(",")+")").bind(...serviceIds).all();
+    const serviceRows=rows.results||[];
+    if(serviceRows.length!==serviceIds.length||serviceRows.some(x=>!x.is_active))return json({error:"Um dos serviços selecionados não está disponível no momento."},400);
+    const byId=new Map(serviceRows.map(x=>[x.id,x]));
+    const ordered=serviceIds.map(id=>byId.get(id)),duration=ordered.reduce((sum,x)=>sum+(Number(x.duration_minutes)||60),0);
+    const primary=ordered[0],serviceNames=ordered.map(x=>x.name),id=crypto.randomUUID();
+    const storedNotes="[[SERVICES:"+JSON.stringify(serviceNames)+"]]"+(notes?"\\n"+notes:"");
     const hoursRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='weekly_hours'").first();
-    if(serviceRow.duration_minutes && hoursRow){
-      let weekly; try { weekly=JSON.parse(hoursRow.setting_value); } catch { weekly=null; }
-      const weekday=new Date(Date.UTC(year,month-1,day)).getUTCDay();
-      const hours=weekly && weekly[String(weekday)];
-      if(!hours) return json({error:"O salão não atende neste dia. Escolha outra data."},409);
-      const toMin=s=>Number(s.slice(0,2))*60+Number(s.slice(3,5));
-      const startMin=hour*60+minute, endEpoch=Date.parse(startsAt)+serviceRow.duration_minutes*60000;
-      const endDate=new Date(endEpoch+3*60*60000).toISOString().slice(0,19);
-      const endsAt=endDate+"-03:00";
+    let endsAt=null;
+    if(hoursRow){
+      let weekly;try{weekly=JSON.parse(hoursRow.setting_value)}catch{weekly=null}
+      const weekday=new Date(Date.UTC(year,month-1,day)).getUTCDay(),hours=weekly&&weekly[String(weekday)];
+      if(!hours)return json({error:"O salão não atende neste dia. Escolha outra data."},409);
+      const toMin=s=>Number(s.slice(0,2))*60+Number(s.slice(3,5)),startMin=hour*60+minute,endEpoch=Date.parse(startsAt)+duration*60000;
+      const endDate=new Date(endEpoch+3*60*60000).toISOString().slice(0,19);endsAt=endDate+"-03:00";
       const intervalRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='slot_interval_minutes'").first();
       const interval=Math.min(120,Math.max(15,Number(intervalRow?.setting_value)||30));
-      if(startMin<toMin(hours.open)||startMin+serviceRow.duration_minutes>toMin(hours.close)||(startMin-toMin(hours.open))%interval!==0) return json({error:"Esse horário está fora da agenda configurada."},409);
-      const blockedPeriod=await env.DB.prepare("SELECT reason FROM blocked_periods WHERE starts_at < ? AND ends_at > ? ORDER BY starts_at LIMIT 1").bind(endsAt,startsAt).first();
-      if(blockedPeriod) return json({error:"Este horário está bloqueado"+(blockedPeriod.reason?": "+blockedPeriod.reason:"")+". Escolha outro horário."},409);
-      const inserted=await env.DB.prepare("INSERT INTO appointments (id,customer_name,customer_phone,service_id,starts_at,ends_at,status,customer_notes) SELECT ?,?,?,?,?,?,'requested',? WHERE NOT EXISTS (SELECT 1 FROM appointments WHERE status IN ('requested','confirmed') AND ((starts_at < ? AND ends_at > ?) OR (ends_at IS NULL AND starts_at = ?))) AND NOT EXISTS (SELECT 1 FROM blocked_periods WHERE starts_at < ? AND ends_at > ?)")
-        .bind(id,name,phone,service,startsAt,endsAt,notes,endsAt,startsAt,startsAt,endsAt,startsAt).run();
-      if(!inserted.meta?.changes) {
-        const latestBlock=await env.DB.prepare("SELECT reason FROM blocked_periods WHERE starts_at < ? AND ends_at > ? ORDER BY starts_at LIMIT 1").bind(endsAt,startsAt).first();
-        if(latestBlock) return json({error:"Este horário está bloqueado"+(latestBlock.reason?": "+latestBlock.reason:"")+". Escolha outro horário."},409);
-        return json({error:"Este horário já está ocupado. Escolha outro horário disponível."},409);
-      }
-    } else {
-      await env.DB.prepare("INSERT INTO appointments (id, customer_name, customer_phone, service_id, starts_at, status, customer_notes) VALUES (?, ?, ?, ?, ?, 'requested', ?)")
-        .bind(id,name,phone,service,startsAt,notes).run();
+      if(startMin<toMin(hours.open)||startMin+duration>toMin(hours.close)||(startMin-toMin(hours.open))%interval!==0)return json({error:"Esse horário está fora da agenda configurada para a duração total dos serviços."},409);
+      const blocked=await env.DB.prepare("SELECT reason FROM blocked_periods WHERE starts_at < ? AND ends_at > ? ORDER BY starts_at LIMIT 1").bind(endsAt,startsAt).first();
+      if(blocked)return json({error:"Este horário está bloqueado"+(blocked.reason?": "+blocked.reason:"")+". Escolha outro horário."},409);
+      const inserted=await env.DB.prepare("INSERT INTO appointments (id,customer_name,customer_phone,service_id,starts_at,ends_at,status,customer_notes) SELECT ?,?,?,?,?,?,'requested',? WHERE NOT EXISTS (SELECT 1 FROM appointments WHERE status IN ('requested','confirmed') AND ((starts_at < ? AND ends_at > ?) OR (ends_at IS NULL AND starts_at = ?))) AND NOT EXISTS (SELECT 1 FROM blocked_periods WHERE starts_at < ? AND ends_at > ?)").bind(id,name,phone,primary.id,startsAt,endsAt,storedNotes,endsAt,startsAt,startsAt,endsAt,startsAt).run();
+      if(!inserted.meta?.changes)return json({error:"Este horário acabou de ficar indisponível. Escolha outro horário."},409);
+    }else{
+      await env.DB.prepare("INSERT INTO appointments (id,customer_name,customer_phone,service_id,starts_at,status,customer_notes) VALUES (?,?,?,?,?,'requested',?)").bind(id,name,phone,primary.id,startsAt,storedNotes).run();
     }
-    return json({ok:true,id,message:"Solicitação recebida. O salão ainda precisa confirmar o horário."},201);
+    return json({ok:true,id,services:serviceNames,duration_minutes:duration,message:"Solicitação recebida. O salão ainda precisa confirmar o horário."},201);
   }
   if (path === "/admin/login" && request.method === "POST") {
     let body; try { body=await request.json(); } catch { return json({error:"Dados inválidos."},400); }
@@ -248,7 +242,8 @@ if (path === "/admin/config" && request.method === "GET") {
     }
     if (path === "/admin/appointments" && request.method === "GET") {
       const result=await env.DB.prepare("SELECT a.id,a.customer_name,a.customer_phone,a.starts_at,a.status,a.customer_notes,a.internal_notes,a.created_at,s.name AS service_name FROM appointments a LEFT JOIN services s ON s.id=a.service_id ORDER BY a.starts_at DESC LIMIT 300").all();
-      return json({appointments:result.results || []});
+      const appointments=(result.results||[]).map(a=>{const match=String(a.customer_notes||"").match(/^\\[\\[SERVICES:(.*?)\\]\\](?:\\n|$)/);if(match){try{a.service_name=JSON.parse(match[1]).join(", ")}catch{}a.customer_notes=String(a.customer_notes||"").replace(/^\\[\\[SERVICES:.*?\\]\\](?:\\n|$)/,"")}return a});
+      return json({appointments});
     }
     if (path.startsWith("/admin/appointments/") && request.method === "DELETE") {
       const id=path.split("/").pop();
