@@ -52,6 +52,11 @@ export async function onRequest({request, env}) {
   if (!env.DB) return json({error:"Banco de dados ainda não configurado."},503);
   if (!sameOrigin(request)) return json({error:"Origem não permitida."},403);
   const url = new URL(request.url), path = url.pathname.replace(/^\/api/,"");
+  if (request.method === "GET" && path === "/booking-settings") {
+    const row=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='deposit_percent'").first();
+    const value=Number(row?.setting_value)||0;
+    return json({deposit_percent:Number.isInteger(value)&&value>=0&&value<=100?value:0});
+  }
   if (request.method === "GET" && path === "/availability") {
     const service=cleanText(url.searchParams.get("service"),50);
     const date=cleanText(url.searchParams.get("date"),10);
@@ -195,9 +200,12 @@ export async function onRequest({request, env}) {
         const minutes=s=>Number(s.slice(0,2))*60+Number(s.slice(3,5));
         if(minutes(h.open)>=minutes(h.close)) return json({error:"O fechamento precisa ser posterior à abertura."},400);
       }
+      const depositPercent=body.deposit_percent===undefined?0:Number(body.deposit_percent);
+      if(!Number.isInteger(depositPercent)||depositPercent<0||depositPercent>100) return json({error:"O sinal deve ser um percentual inteiro entre 0 e 100."},400);
       const interval=Number(body.slot_interval_minutes);
       if(![15,30,60].includes(interval)) return json({error:"Intervalo entre opções inválido."},400);
       const statements=[
+        env.DB.prepare("INSERT INTO salon_settings(setting_key,setting_value,updated_at) VALUES('deposit_percent',?,CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO UPDATE SET setting_value=excluded.setting_value,updated_at=CURRENT_TIMESTAMP").bind(String(depositPercent)),
         env.DB.prepare("INSERT INTO salon_settings(setting_key,setting_value,updated_at) VALUES('weekly_hours',?,CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO UPDATE SET setting_value=excluded.setting_value,updated_at=CURRENT_TIMESTAMP").bind(JSON.stringify(body.weekly_hours)),
         env.DB.prepare("INSERT INTO salon_settings(setting_key,setting_value,updated_at) VALUES('slot_interval_minutes',?,CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO UPDATE SET setting_value=excluded.setting_value,updated_at=CURRENT_TIMESTAMP").bind(String(interval))
       ];
