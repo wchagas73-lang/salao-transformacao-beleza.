@@ -1,6 +1,7 @@
 const COOKIE = "salon_admin";
 const SESSION_SECONDS = 60 * 60 * 24 * 30;
 const ALLOWED_SERVICES = new Set(["Mega Hair","Hidratação","Progressivas","Corte","Escova","Luzes","Relaxamento"]);
+const DEFAULT_SERVICE_PRICES = {"Mega Hair":300,"Hidratação":100,"Progressivas":220,"Corte":70,"Escova":60,"Luzes":350,"Relaxamento":150};
 
 function json(data, status = 200, headers = {}) {
   return new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...headers } });
@@ -55,7 +56,7 @@ export async function onRequest({request, env}) {
   if (request.method === "GET" && path === "/booking-settings") {
     const row=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='deposit_percent'").first();
     const value=Number(row?.setting_value)||0;
-    const pricesRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='service_prices'").first();let servicePrices={};try{servicePrices=JSON.parse(pricesRow?.setting_value||'{}')}catch{};return json({deposit_percent:Number.isInteger(value)&&value>=0&&value<=100?value:0,service_prices:servicePrices});
+    const pricesRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='service_prices'").first();let servicePrices=DEFAULT_SERVICE_PRICES;try{if(pricesRow?.setting_value)servicePrices={...DEFAULT_SERVICE_PRICES,...JSON.parse(pricesRow.setting_value)}}catch{};return json({deposit_percent:Number.isInteger(value)&&value>=0&&value<=100?value:0,service_prices:servicePrices});
   }
   if (request.method === "GET" && path === "/availability") {
     const service=cleanText(url.searchParams.get("service"),50);
@@ -187,6 +188,7 @@ export async function onRequest({request, env}) {
         env.DB.prepare("SELECT setting_key,setting_value FROM salon_settings").all()
       ]);
       const config={}; for(const row of settings.results||[]){try{config[row.setting_key]=JSON.parse(row.setting_value)}catch{config[row.setting_key]=row.setting_value}}
+      config.service_prices={...DEFAULT_SERVICE_PRICES,...(config.service_prices||{})};
       return json({services:services.results||[],settings:config});
     }
     if (path === "/admin/config" && request.method === "PUT") {
