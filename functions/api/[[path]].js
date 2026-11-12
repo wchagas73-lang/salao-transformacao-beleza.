@@ -68,27 +68,25 @@ export async function onRequest({request, env}) {
     const hoursRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='weekly_hours'").first();
     const defaultWeekly={"0":null,"1":{open:"09:00",close:"20:00"},"2":{open:"09:00",close:"20:00"},"3":{open:"09:00",close:"20:00"},"4":{open:"09:00",close:"20:00"},"5":{open:"09:00",close:"20:00"},"6":{open:"09:00",close:"20:00"}};
     let weekly=defaultWeekly; try { if(hoursRow?.setting_value) weekly=JSON.parse(hoursRow.setting_value); } catch { weekly=defaultWeekly; }
-    weekly=Object.fromEntries(Object.entries(weekly).map(([day,hours])=>[day,hours?{open:"09:00",close:"20:00"}:null]));
-    if(hoursRow?.setting_value) await env.DB.prepare("UPDATE salon_settings SET setting_value=?,updated_at=CURRENT_TIMESTAMP WHERE setting_key='weekly_hours'").bind(JSON.stringify(weekly)).run();
+    weekly=weekly||defaultWeekly;
     const [year,month,day]=date.split("-").map(Number), dayDate=new Date(Date.UTC(year,month-1,day));
     if(dayDate.getUTCFullYear()!==year||dayDate.getUTCMonth()!==month-1||dayDate.getUTCDate()!==day) return json({error:"Data inválida."},400);
     const hours=weekly[String(dayDate.getUTCDay())];
     if(!hours || !/^\d{2}:\d{2}$/.test(hours.open||"") || !/^\d{2}:\d{2}$/.test(hours.close||"")) return json({configured:true,slots:[],duration_minutes:duration});
     const toMin=s=>Number(s.slice(0,2))*60+Number(s.slice(3,5)),open=toMin(hours.open),close=toMin(hours.close);
-    const intervalRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='slot_interval_minutes'").first();
-    const interval=Math.min(120,Math.max(15,Number(intervalRow?.setting_value)||30));
+    const interval=60;
     const dayStart=date+"T00:00:00-03:00",nextDay=new Date(Date.UTC(year,month-1,day+1)).toISOString().slice(0,10),dayEnd=nextDay+"T00:00:00-03:00";
     const busy=await env.DB.prepare("SELECT starts_at,ends_at FROM appointments WHERE status IN ('requested','confirmed') AND starts_at < ? AND (ends_at > ? OR (ends_at IS NULL AND starts_at >= ?))").bind(dayEnd,dayStart,dayStart).all();
     const blocked=await env.DB.prepare("SELECT starts_at,ends_at,reason FROM blocked_periods WHERE starts_at < ? AND ends_at > ? ORDER BY starts_at").bind(dayEnd,dayStart).all();
     const blockedPeriods=(blocked.results||[]).map(x=>({starts_at:x.starts_at,ends_at:x.ends_at,reason:x.reason||""}));
     const busyRanges=[...(busy.results||[]),...blockedPeriods].map(x=>{const start=Date.parse(x.starts_at),end=x.ends_at?Date.parse(x.ends_at):start+1;return [start,end]}).filter(x=>Number.isFinite(x[0])&&Number.isFinite(x[1]));
-    const slots=[];
-    for(let m=open;m+duration<=close;m+=interval){
-      const hh=String(Math.floor(m/60)).padStart(2,"0"),mm=String(m%60).padStart(2,"0"),start=Date.parse(date+"T"+hh+":"+mm+":00-03:00"),end=start+duration*60000;
-      if(start<=Date.now()||busyRanges.some(([a,b])=>start<b&&end>a))continue;
-      slots.push(hh+":"+mm);
+    const slots=[],options=[];
+    for(let m=open;m<=close;m+=interval){
+      const hh=String(Math.floor(m/60)).padStart(2,"0"),mm=String(m%60).padStart(2,"0"),label=hh+":"+mm,start=Date.parse(date+"T"+label+":00-03:00"),end=start+duration*60000;
+      const available=start>Date.now()&&m+duration<=close&&!busyRanges.some(([a,b])=>start<b&&end>a);
+      options.push({time:label,available});if(available)slots.push(label);
     }
-    return json({configured:true,slots,duration_minutes:duration,blocked_periods:blockedPeriods});
+    return json({configured:true,slots,options,duration_minutes:duration,blocked_periods:blockedPeriods});
   }
   if (request.method === "POST" && path === "/request") {
     let body;try{body=await request.json()}catch{return json({error:"Dados inválidos."},400)}
@@ -116,17 +114,15 @@ export async function onRequest({request, env}) {
     const hoursRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='weekly_hours'").first();
     const defaultWeekly={"0":null,"1":{open:"09:00",close:"20:00"},"2":{open:"09:00",close:"20:00"},"3":{open:"09:00",close:"20:00"},"4":{open:"09:00",close:"20:00"},"5":{open:"09:00",close:"20:00"},"6":{open:"09:00",close:"20:00"}};
     let weekly=defaultWeekly;try{if(hoursRow?.setting_value)weekly=JSON.parse(hoursRow.setting_value)}catch{weekly=defaultWeekly}
-    weekly=Object.fromEntries(Object.entries(weekly).map(([day,hours])=>[day,hours?{open:"09:00",close:"20:00"}:null]));
-    if(hoursRow?.setting_value) await env.DB.prepare("UPDATE salon_settings SET setting_value=?,updated_at=CURRENT_TIMESTAMP WHERE setting_key='weekly_hours'").bind(JSON.stringify(weekly)).run();
+    weekly=weekly||defaultWeekly;
     let endsAt=null;
     {
       const weekday=new Date(Date.UTC(year,month-1,day)).getUTCDay(),hours=weekly&&weekly[String(weekday)];
       if(!hours)return json({error:"O salão não atende neste dia. Escolha outra data."},409);
       const toMin=s=>Number(s.slice(0,2))*60+Number(s.slice(3,5)),startMin=hour*60+minute,endEpoch=Date.parse(startsAt)+duration*60000;
       const endDate=new Date(endEpoch+3*60*60000).toISOString().slice(0,19);endsAt=endDate+"-03:00";
-      const intervalRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='slot_interval_minutes'").first();
-      const interval=Math.min(120,Math.max(15,Number(intervalRow?.setting_value)||30));
-      if(startMin<toMin(hours.open)||startMin+duration>toMin(hours.close)||(startMin-toMin(hours.open))%interval!==0)return json({error:"Esse horário está fora da agenda configurada para a duração total dos serviços."},409);
+      const interval=60;
+      if(startMin<toMin(hours.open)||startMin+duration>toMin(hours.close)||(startMin-toMin(hours.open))%interval!==0return json({error:"Esse horário está fora da agenda configurada para a duração total dos serviços."},409);
       const blocked=await env.DB.prepare("SELECT reason FROM blocked_periods WHERE starts_at < ? AND ends_at > ? ORDER BY starts_at LIMIT 1").bind(endsAt,startsAt).first();
       if(blocked)return json({error:"Este horário está bloqueado"+(blocked.reason?": "+blocked.reason:"")+". Escolha outro horário."},409);
       const inserted=await env.DB.prepare("INSERT INTO appointments (id,customer_name,customer_phone,service_id,starts_at,ends_at,status,customer_notes) SELECT ?,?,?,?,?,?,'requested',? WHERE NOT EXISTS (SELECT 1 FROM appointments WHERE status IN ('requested','confirmed') AND ((starts_at < ? AND ends_at > ?) OR (ends_at IS NULL AND starts_at = ?))) AND NOT EXISTS (SELECT 1 FROM blocked_periods WHERE starts_at < ? AND ends_at > ?)").bind(id,name,phone,primary.id,startsAt,endsAt,storedNotes,endsAt,startsAt,startsAt,endsAt,startsAt).run();
@@ -205,10 +201,7 @@ if (path === "/admin/config" && request.method === "GET") {
         env.DB.prepare("SELECT setting_key,setting_value FROM salon_settings").all()
       ]);
       const config={}; for(const row of settings.results||[]){try{config[row.setting_key]=JSON.parse(row.setting_value)}catch{config[row.setting_key]=row.setting_value}}
-      if(config.weekly_hours&&typeof config.weekly_hours==="object"){
-        config.weekly_hours=Object.fromEntries(Object.entries(config.weekly_hours).map(([day,hours])=>[day,hours?{open:"09:00",close:"20:00"}:null]));
-        await env.DB.prepare("UPDATE salon_settings SET setting_value=?,updated_at=CURRENT_TIMESTAMP WHERE setting_key='weekly_hours'").bind(JSON.stringify(config.weekly_hours)).run();
-      }
+      if(!config.weekly_hours||typeof config.weekly_hours!=="object") config.weekly_hours={"0":null,"1":{open:"09:00",close:"20:00"},"2":{open:"09:00",close:"20:00"},"3":{open:"09:00",close:"20:00"},"4":{open:"09:00",close:"20:00"},"5":{open:"09:00",close:"20:00"},"6":{open:"09:00",close:"20:00"}};
       config.service_prices={...DEFAULT_SERVICE_PRICES,...(config.service_prices||{})};
       config.service_deposit_percents=config.service_deposit_percents||{};
       return json({services:services.results||[],settings:config});
