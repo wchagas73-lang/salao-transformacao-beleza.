@@ -95,7 +95,7 @@ export async function onRequest({request, env}) {
     if (!body || typeof body !== "object" || Array.isArray(body)) return json({error:"Dados inválidos."},400);
     const name=cleanText(body.name,100), phone=cleanText(body.phone,30), service=cleanText(body.service,50);
     const date=cleanText(body.date,10), time=cleanText(body.time,5), notes=cleanText(body.notes,500);
-    if (name.length<2 || phone.replace(/\D/g,"").length<10 || !ALLOWED_SERVICES.has(service) || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return json({error:"Confira os campos obrigatórios."},400);
+    if (name.length<2 || phone.replace(/\D/g,"").length<10 || !service || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return json({error:"Confira os campos obrigatórios."},400);
     const [year,month,day]=date.split("-").map(Number), [hour,minute]=time.split(":").map(Number);
     const candidate = new Date(Date.UTC(year,month-1,day,hour,minute));
     if (candidate.getUTCFullYear()!==year || candidate.getUTCMonth()!==month-1 || candidate.getUTCDate()!==day || hour>23 || minute>59) return json({error:"Data ou horário inválido."},400);
@@ -228,12 +228,14 @@ if (path === "/admin/config" && request.method === "GET") {
       const servicePrices=body.service_prices===undefined?{}:body.service_prices;
       if(!servicePrices||typeof servicePrices!=='object'||Array.isArray(servicePrices)) return json({error:'Informe preços válidos para os serviços.'},400);
       const serviceIds=(await env.DB.prepare("SELECT id FROM services").all()).results||[];const validServiceIds=new Set(serviceIds.map(s=>s.id));for(const [service,price] of Object.entries(servicePrices)){if(!validServiceIds.has(service)||!Number.isFinite(Number(price))||Number(price)<0||Number(price)>100000) return json({error:'Confira os preços dos serviços. Use valores entre R$ 0 e R$ 100.000.'},400)}
+      const servicePercents=body.service_deposit_percents||{};if(!servicePercents||typeof servicePercents!=='object'||Array.isArray(servicePercents))return json({error:'Percentuais individuais inválidos.'},400);for(const [service,percent] of Object.entries(servicePercents)){if(!validServiceIds.has(service)||!Number.isInteger(Number(percent))||Number(percent)<0||Number(percent)>100)return json({error:'Cada sinal individual deve estar entre 0 e 100%.'},400)}
       if(!Number.isInteger(depositPercent)||depositPercent<0||depositPercent>100) return json({error:"O sinal deve ser um percentual inteiro entre 0 e 100."},400);
       const interval=Number(body.slot_interval_minutes);
       if(![15,30,60].includes(interval)) return json({error:"Intervalo entre opções inválido."},400);
       const statements=[
         env.DB.prepare("INSERT INTO salon_settings(setting_key,setting_value,updated_at) VALUES('deposit_percent',?,CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO UPDATE SET setting_value=excluded.setting_value,updated_at=CURRENT_TIMESTAMP").bind(String(depositPercent)),
         env.DB.prepare("INSERT INTO salon_settings(setting_key,setting_value,updated_at) VALUES('service_prices',?,CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO UPDATE SET setting_value=excluded.setting_value,updated_at=CURRENT_TIMESTAMP").bind(JSON.stringify(servicePrices)),
+        env.DB.prepare("INSERT INTO salon_settings(setting_key,setting_value,updated_at) VALUES('service_deposit_percents',?,CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO UPDATE SET setting_value=excluded.setting_value,updated_at=CURRENT_TIMESTAMP").bind(JSON.stringify(servicePercents)),
         env.DB.prepare("INSERT INTO salon_settings(setting_key,setting_value,updated_at) VALUES('service_deposit_percents','{}',CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO NOTHING"),
         env.DB.prepare("INSERT INTO salon_settings(setting_key,setting_value,updated_at) VALUES('weekly_hours',?,CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO UPDATE SET setting_value=excluded.setting_value,updated_at=CURRENT_TIMESTAMP").bind(JSON.stringify(body.weekly_hours)),
         env.DB.prepare("INSERT INTO salon_settings(setting_key,setting_value,updated_at) VALUES('slot_interval_minutes',?,CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO UPDATE SET setting_value=excluded.setting_value,updated_at=CURRENT_TIMESTAMP").bind(String(interval))
