@@ -128,9 +128,17 @@ export async function onRequest({request, env}) {
     let body; try { body=await request.json(); } catch { return json({error:"Dados inválidos."},400); }
     if (!body || typeof body !== "object" || Array.isArray(body)) return json({error:"Dados inválidos."},400);
     if (!env.ADMIN_PASSWORD || env.ADMIN_PASSWORD.length<12 || !env.SESSION_SECRET || env.SESSION_SECRET.length<32) return json({error:"A configuração de acesso administrativo está incompleta. Verifique as variáveis secretas no Cloudflare."},503);
-    const supplied=cleanText(body.password,200);
-    if (supplied.length !== env.ADMIN_PASSWORD.length || supplied !== env.ADMIN_PASSWORD) {
-      return json({error:"Senha incorreta."},401);
+    const supplied=typeof body.password === "string" ? body.password.slice(0,200) : "";
+    const configuredPassword=env.ADMIN_PASSWORD;
+    if (supplied !== configuredPassword) {
+      return json({
+        error:"Senha incorreta.",
+        diagnostic:{
+          receivedLength:supplied.length,
+          configuredLength:configuredPassword.length,
+          lengthsMatch:supplied.length===configuredPassword.length
+        }
+      },401);
     }
     const token=await makeSession(env.SESSION_SECRET);
     return json({ok:true},200,{ "set-cookie":COOKIE+"="+token+"; HttpOnly; Secure; SameSite=Strict; Path=/api/admin; Max-Age="+SESSION_SECONDS });
