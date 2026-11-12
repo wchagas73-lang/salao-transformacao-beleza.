@@ -83,6 +83,38 @@
     }
     @media(max-width:360px){.services{grid-template-columns:1fr}.links a{font-size:10px}.service-catalog{grid-template-columns:repeat(2,minmax(0,1fr))!important}.service-art{height:100px}.service-art-symbol{width:100%;height:100%}}
     @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition:none!important}}
+    /* Redesign premium com profundidade 3D e fotografia editorial */
+    :root{--bg:#080808;--panel:#15120e;--gold:#d8b66a;--cream:#fff8ed;--muted:#c4b8a6;--line:#5b4728}
+    body{background:radial-gradient(ellipse at 50% -10%,#4b351d 0,#17110a 34%,#080808 75%);font-family:Arial,sans-serif}
+    .top{position:sticky;top:0;z-index:20;background:#090807ef;backdrop-filter:blur(18px);box-shadow:0 8px 30px #0008}
+    .brand{font-family:Georgia,serif;font-size:18px;text-shadow:0 2px 14px #d8b66a55}
+    .hero{perspective:1200px;gap:5vw;min-height:650px}
+    .hero h1{font-family:Georgia,serif;text-shadow:0 8px 35px #000}
+    .hero-art{min-height:480px;border:1px solid #d8b66a88;border-radius:28px;background:linear-gradient(145deg,#4b321b,#120e0b 60%,#050505);transform:rotateY(-7deg) rotateX(2deg);box-shadow:22px 28px 60px #000b,inset 0 1px 1px #fff5,inset -14px -14px 35px #0009}
+    .hero-art:before{width:78%;height:110%;left:11%;top:6%;border:2px solid #d8b66a66;box-shadow:0 0 40px #d8b66a33,inset 0 0 35px #d8b66a22}
+    .hero-art:after{width:60%;height:92%;left:20%;top:13%;border:1px solid #fff5;box-shadow:0 0 55px #d8b66a22}
+    .art-caption strong{font-size:34px;text-shadow:0 4px 20px #000}
+    section{position:relative}
+    .section-head h2,.about h2,.booking-info h2{font-family:Georgia,serif;text-shadow:0 5px 25px #000}
+    .service-catalog{perspective:1200px}
+    .service-catalog button{position:relative;border:1px solid #8b6b35!important;border-radius:18px!important;background:linear-gradient(145deg,#282017,#0c0b0a 72%)!important;padding:12px!important;box-shadow:0 18px 35px #0009,inset 0 1px #fff2,inset -5px -7px 15px #0009!important;transform-style:preserve-3d}
+    .service-catalog button:hover,.service-catalog button:focus-visible{transform:translateY(-7px) rotateX(2deg);box-shadow:0 25px 45px #000b,0 0 0 1px #d8b66a66,inset 0 1px #fff3!important}
+    .service-art{height:190px;border-radius:12px;background:#090807;box-shadow:inset 0 0 25px #000b,0 5px 18px #0008}
+    .service-art img{transition:transform .45s ease,filter .45s ease}
+    .service-catalog button:hover .service-art img{transform:scale(1.07);filter:saturate(1.05) contrast(1.08)}
+    .service-catalog button strong{font-family:Georgia,serif;font-size:19px!important;color:#f7e7c5!important}
+    .service-catalog button span{line-height:1.55}
+    .form,.service,.about-mark{background:linear-gradient(145deg,#211a11,#0c0b0a 75%);border:1px solid #8a6a36;box-shadow:0 22px 50px #0009,inset 0 1px #fff2,inset -8px -8px 20px #0008}
+    .form{border-radius:22px;padding:30px}
+    .field input,.field select,.field textarea{background:#080807;border:1px solid #70572d;border-radius:12px;min-height:50px}
+    .field select option:disabled{color:#777;background:#252525}
+    .btn{border-radius:12px;background:linear-gradient(135deg,#f1d48d,#b78b3f);border:1px solid #f6dfa7;box-shadow:0 9px 22px #0008,inset 0 1px #fff8;font-weight:700;letter-spacing:.5px}
+    .btn.secondary,.btn.alt{background:linear-gradient(145deg,#1b1711,#090909);box-shadow:0 8px 20px #0008,inset 0 1px #fff2}
+    .about{background:linear-gradient(115deg,#16110b,#080808);border-block:1px solid #5d4727}
+    .about-mark{transform:rotateY(5deg);border-radius:20px}
+    .booking{align-items:start}
+    footer{background:#070707}
+    @media(max-width:760px){.hero{min-height:0}.hero-art{min-height:280px;transform:none}.service-art{height:132px}.service-catalog button{padding:9px!important}.form{padding:18px}.about-mark{transform:none}}
   </style>
 </head>
 <body>
@@ -172,18 +204,9 @@
           const option=document.createElement('option');option.value=service.id;option.textContent=service.name;serviceInput.append(option);
           const card=document.createElement('button');card.type='button';card.style.cssText='text-align:left;background:#191614;border:1px solid #59482f;border-radius:14px;padding:12px;color:#f5eee3;cursor:pointer;display:flex;flex-direction:column;align-items:stretch;min-height:100%';
           const art=document.createElement('div');art.className='service-art';art.setAttribute('aria-hidden','true');
-          const illustrations={
-            'mega hair':"<svg viewBox=\"0 0 120 100\"><path d=\"M25 88V42Q25 10 60 10t35 32v46L82 76V43Q82 29 60 29T38 43v33Z\" fill=\"#d6b46a\"/><path d=\"M48 36v48M60 30v57M72 36v48\" stroke=\"#fff0c8\" stroke-width=\"5\" stroke-linecap=\"round\"/></svg>",
-            'hidratação':"<svg viewBox=\"0 0 120 100\"><path d=\"M60 8C45 31 25 51 25 68a35 35 0 0 0 70 0C95 51 75 31 60 8Z\" fill=\"#d6b46a\"/><path d=\"M48 62q2 17 17 20\" stroke=\"#fff0c8\" stroke-width=\"7\" fill=\"none\" stroke-linecap=\"round\"/></svg>",
-            'luzes':"<svg viewBox=\"0 0 120 100\"><path d=\"M27 88V43Q27 10 60 10t33 33v45L78 75V43Q78 28 60 28T42 43v37Z\" fill=\"#8c6230\"/><path d=\"M47 28v49M60 25v57M73 28v49\" stroke=\"#ffe6a3\" stroke-width=\"8\" stroke-linecap=\"round\"/><path d=\"m92 9 4 10 11 4-11 4-4 10-4-10-11-4 11-4Z\" fill=\"#f5d98e\"/></svg>",
-            'corte':"<svg viewBox=\"0 0 120 100\"><circle cx=\"35\" cy=\"72\" r=\"13\" stroke=\"#d6b46a\" stroke-width=\"8\" fill=\"none\"/><circle cx=\"66\" cy=\"82\" r=\"12\" stroke=\"#d6b46a\" stroke-width=\"8\" fill=\"none\"/><path d=\"m44 62 60-49M57 73l49-34\" stroke=\"#fff0c8\" stroke-width=\"8\" stroke-linecap=\"round\"/></svg>",
-            'escova':"<svg viewBox=\"0 0 120 100\"><path d=\"M19 40q30-38 67-10 18 14 17 39-20-19-40-10-25 12-44-1 17-5 18-18-3-8-18 0Z\" fill=\"#d6b46a\"/><path d=\"M28 54q30-18 59 13M27 68q25-10 45 12\" stroke=\"#fff0c8\" stroke-width=\"7\" fill=\"none\" stroke-linecap=\"round\"/><rect x=\"76\" y=\"72\" width=\"13\" height=\"23\" rx=\"6\" fill=\"#9b7136\"/></svg>",
-            'progressivas':"<svg viewBox=\"0 0 120 100\"><path d=\"M30 12q-7 40 0 76h14q-7-39 0-76ZM53 10q-4 40 1 78h14q-5-39-1-78ZM76 13q0 39 7 75h14q-7-38-7-75Z\" fill=\"#d6b46a\"/><path d=\"M25 37h69M27 60h70\" stroke=\"#fff0c8\" stroke-width=\"5\" stroke-linecap=\"round\"/></svg>",
-            'relaxamento':"<svg viewBox=\"0 0 120 100\"><path d=\"M27 12q-20 18 0 35t0 37l14 7q20-25 0-44t0-35ZM57 12q-20 18 0 35t0 37l14 7q20-25 0-44t0-35ZM87 12q-20 18 0 35t0 37l14 7q20-25 0-44t0-35Z\" fill=\"#d6b46a\"/></svg>"
-          };
-          const symbol=document.createElement('span');symbol.className='service-art-symbol';
-          const key=service.name.toLocaleLowerCase('pt-BR');symbol.innerHTML=illustrations[key]||'<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M22 80c10-25 10-43 28-60 18 17 18 35 28 60M31 69c13-11 25-11 38 0"/></svg>';
-          art.append(symbol);
+          const servicePhotos={"mega hair":"https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=900&q=85","hidratação":"https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=900&q=85","luzes":"https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&w=900&q=85","corte":"https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=900&q=85","escova":"https://images.unsplash.com/photo-1524250502761-1ac6f2e30d43?auto=format&fit=crop&w=900&q=85","progressivas":"https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=900&q=85","relaxamento":"https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=85"};
+          const photo=document.createElement('img');photo.src=servicePhotos[key]||servicePhotos['mega hair'];photo.alt='Referência visual de '+service.name;photo.loading='lazy';photo.style.cssText='width:100%;height:100%;object-fit:cover;display:block;filter:saturate(.82) contrast(1.04)';
+          art.append(photo);
           const title=document.createElement('strong');title.textContent=service.name;title.style.cssText='display:block;margin-top:10px;font-size:16px;color:#f5eee3';
           const descriptions={
             'mega hair':'Alongamento e volume para transformar o visual com mais comprimento e movimento.',
@@ -228,9 +251,9 @@
         const response=await fetch('/api/availability?services='+encodeURIComponent(selectedServiceIds.join(','))+'&date='+encodeURIComponent(dateInput.value),{cache:'no-store'});
         const data=await response.json();if(!response.ok)throw new Error(data.error||'Não foi possível consultar a agenda.');
         if(!data.configured){slotsList.innerHTML='<option value="">Agenda ainda não configurada</option>';availabilityHint.textContent='A agenda ainda está sendo configurada. Tente novamente mais tarde.';return}
-        currentAvailability=data;slotsList.innerHTML='<option value="">Selecione um horário disponível</option>';
-        (data.slots||[]).forEach(slot=>{const option=document.createElement('option');option.value=slot;option.textContent=slot;slotsList.append(option)});
-        availabilityHint.textContent=data.slots?.length?'Escolha um dos horários disponíveis na lista. O agendamento será confirmado pelo salão.':'Não há horários livres para a duração total dos serviços nessa data. Escolha outra data.';
+        currentAvailability=data;slotsList.innerHTML='<option value="">Selecione um horário</option>';
+        (data.options||[]).forEach(item=>{const option=document.createElement('option');option.value=item.time;option.textContent=item.available?item.time:item.time+' • indisponível';option.disabled=!item.available;if(!item.available)option.style.color='#777';slotsList.append(option)});
+        availabilityHint.textContent='Todos os horários de funcionamento aparecem na lista. Os horários ocupados ou fora da duração do serviço ficam desabilitados.';
       }catch(err){slotsList.innerHTML='<option value="">Não foi possível carregar os horários</option>';availabilityHint.textContent=err.message||'Não foi possível consultar a agenda agora.'}
     }
     document.getElementById('addAnotherService').addEventListener('click',()=>document.getElementById('serviceCatalog').scrollIntoView({behavior:'smooth',block:'start'}));
@@ -277,6 +300,7 @@
       if(errors.length){reportValidation(errors);return}
       const payload={name:v('name'),phone:v('phone'),services:[...selectedServiceIds],service:selectedServiceIds[0],date:v('date'),time:v('time'),notes:v('details')};
       const button=this.querySelector('button[type="submit"]');button.disabled=true;button.textContent='Registrando solicitação...';
+      let whatsappWindow=null;try{whatsappWindow=window.open('about:blank','_blank')}catch{}
       try{
         const response=await fetch('/api/request',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
         const result=await response.json();if(!response.ok)throw new Error(result.error||'Não foi possível registrar a solicitação.');
@@ -285,14 +309,15 @@
         const totalSignal=payload.services.reduce((sum,id)=>{const amount=Number(window.bookingServicePrices[id])||0,percent=Number(window.bookingServicePercents[id]??window.bookingDepositPercent)||0;return sum+Math.round(amount*percent)/100},0);
         const serviceLines=payload.services.map(id=>{const amount=Number(window.bookingServicePrices[id])||0,percent=Number(window.bookingServicePercents[id]??window.bookingDepositPercent)||0,signal=Math.round(amount*percent)/100;return '   • '+(window.bookingServicesById[id]||id)+'\n     💰 Valor: '+moneyText(amount)+'\n     '+(percent>0?'💳 Sinal ('+percent+'%): '+moneyText(signal):'✅ Sem sinal')});
         const msg=['✨ *NOVA SOLICITAÇÃO DE AGENDAMENTO*','━━━━━━━━━━━━━━━━━━━━','👤 *DADOS DA CLIENTE*','Nome: '+payload.name,'📱 Telefone: '+payload.phone,'','💇‍♀️ *SERVIÇO(S) ESCOLHIDO(S)*',...serviceLines,'','🧾 *RESUMO DOS VALORES*','💰 Total dos serviços: '+moneyText(total),'💳 Total de sinais: '+moneyText(totalSignal),'','📅 *DATA E HORÁRIO*','🗓️ Data desejada: '+payload.date,'🕒 Horário desejado: '+payload.time,'','📝 *OBSERVAÇÕES*',payload.notes||'Nenhuma observação informada','━━━━━━━━━━━━━━━━━━━━','Olá, Cátia! Poderia verificar a disponibilidade e confirmar este agendamento, por favor?'].join('\n');
-        const whatsappUrl='https://wa.me/5532999953215?text='+encodeURIComponent(msg);
+        const whatsappUrl='https://api.whatsapp.com/send?phone=5532999953215&text='+encodeURIComponent(msg);
         const resultBox=document.getElementById('whatsappResult');resultBox.hidden=false;resultBox.innerHTML='';
         resultBox.style.cssText='display:block;width:100%;box-sizing:border-box;margin:18px 0;padding:22px;border:1px solid #d6b46a;border-radius:16px;background:linear-gradient(145deg,#211a10,#12100d);text-align:center';
         const confirmation=document.createElement('div');confirmation.innerHTML='<div style="font-size:32px;margin-bottom:10px">✅</div><strong style="display:block;color:#f5eee3;font:700 17px/1.4 Arial,sans-serif;margin-bottom:8px">Solicitação registrada!</strong><p style="margin:0 0 18px;color:#d8cbb7;font:14px/1.6 Arial,sans-serif">Agora falta apenas avisar o salão. Toque no botão abaixo e, quando o WhatsApp abrir, toque em <strong style="color:#f5d98e">Enviar</strong>.</p>';
         const whatsappLink=document.createElement('a');whatsappLink.href=whatsappUrl;whatsappLink.target='_self';whatsappLink.rel='noopener noreferrer';whatsappLink.textContent='💬  ABRIR WHATSAPP E ENVIAR';whatsappLink.style.cssText='display:flex;width:100%;box-sizing:border-box;min-height:56px;align-items:center;justify-content:center;padding:16px 18px;border-radius:12px;background:#d6b46a;color:#17120b;font:700 15px Arial,sans-serif;text-decoration:none';
         resultBox.append(confirmation,whatsappLink);button.hidden=true;
-        window.location.assign(whatsappUrl);
+        if(whatsappWindow){whatsappWindow.location.href=whatsappUrl}else{whatsappLink.target='_blank';whatsappLink.rel='noopener noreferrer';whatsappLink.textContent='💬 ABRIR WHATSAPP E ENVIAR';whatsappLink.focus()}
       }catch(err){
+        if(whatsappWindow&&!whatsappWindow.closed)whatsappWindow.close();
         const msg=err.message||'Não foi possível registrar a solicitação. Tente outro horário.';
         const hint=document.getElementById('availabilityHint');hint.textContent=msg;hint.scrollIntoView({behavior:'smooth',block:'center'});
         await loadAvailableSlots();
