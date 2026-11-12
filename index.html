@@ -110,7 +110,7 @@
         <input id="service" type="hidden" required>
         <div class="field full"><label>Serviços escolhidos</label><div id="selectedServices" style="background:#100e0d;border:1px solid #59482f;border-radius:10px;padding:12px;color:#f5eee3"><p id="selectedServicesEmpty" style="margin:0;color:#b8aca0;font:12px/1.5 Arial,sans-serif">Escolha um ou mais serviços no catálogo acima.</p><div id="selectedServicesList"></div><button id="addAnotherService" type="button" class="btn secondary" style="margin-top:10px;padding:9px 14px;min-height:38px">+ Adicionar outro serviço</button></div></div>
         <div class="field"><label for="date">Data desejada</label><input id="date" type="date" required></div>
-        <div class="field"><label for="time">Horário desejado</label><input id="time" type="time" list="availableSlots" required><datalist id="availableSlots"></datalist><small id="availabilityHint" style="color:var(--muted);font:11px/1.5 Arial,sans-serif">O salão confirmará a disponibilidade do horário solicitado.</small></div>
+        <div class="field"><label for="time">Horário disponível</label><select id="time" required><option value="">Selecione uma data e os serviços</option></select><small id="availabilityHint" style="color:var(--muted);font:11px/1.5 Arial,sans-serif">O salão confirmará a disponibilidade do horário solicitado.</small></div>
         <div class="field"><label for="name">Seu nome</label><input id="name" type="text" placeholder="Nome completo" required></div>
         <div class="field"><label for="phone">Seu telefone</label><input id="phone" type="tel" placeholder="(00) 00000-0000" required></div>
         <div class="field full"><label for="details">Observações (opcional)</label><textarea id="details" rows="3" placeholder="Conte um pouco sobre o que deseja..."></textarea></div>
@@ -221,17 +221,17 @@
       availabilityHint.textContent='Horário disponível para solicitar. O agendamento ainda depende da confirmação do salão.';
     }
     async function loadAvailableSlots(){
-      slotsList.innerHTML='';currentAvailability=null;
-      if(!selectedServiceIds.length||!dateInput.value){availabilityHint.textContent='Escolha um ou mais serviços e a data para consultar os horários.';return}
-      availabilityHint.textContent='Consultando horários para a duração total dos serviços...';
+      slotsList.innerHTML='<option value="">Carregando horários disponíveis...</option>';timeInput.value='';currentAvailability=null;
+      if(!selectedServiceIds.length||!dateInput.value){slotsList.innerHTML='<option value="">Selecione os serviços e a data primeiro</option>';availabilityHint.textContent='Escolha um ou mais serviços e a data para ver somente os horários livres.';return}
+      availabilityHint.textContent='Consultando os horários livres...';
       try{
-        const response=await fetch('/api/availability?services='+encodeURIComponent(selectedServiceIds.join(','))+'&date='+encodeURIComponent(dateInput.value));
+        const response=await fetch('/api/availability?services='+encodeURIComponent(selectedServiceIds.join(','))+'&date='+encodeURIComponent(dateInput.value),{cache:'no-store'});
         const data=await response.json();if(!response.ok)throw new Error(data.error||'Não foi possível consultar a agenda.');
-        if(!data.configured){availabilityHint.textContent='A agenda ainda está sendo configurada. O salão confirmará o horário solicitado.';return}
-        currentAvailability=data;(data.slots||[]).forEach(slot=>{const option=document.createElement('option');option.value=slot;slotsList.append(option)});
-        availabilityHint.textContent=data.slots?.length?'Horários sugeridos conforme a duração total dos serviços. O pedido ainda depende de confirmação.':'Não há horários livres para a duração total dos serviços nessa data. Tente outra data.';
-        explainSelectedTime();
-      }catch(err){availabilityHint.textContent=err.message||'Não foi possível consultar a agenda agora.'}
+        if(!data.configured){slotsList.innerHTML='<option value="">Agenda ainda não configurada</option>';availabilityHint.textContent='A agenda ainda está sendo configurada. Tente novamente mais tarde.';return}
+        currentAvailability=data;slotsList.innerHTML='<option value="">Selecione um horário disponível</option>';
+        (data.slots||[]).forEach(slot=>{const option=document.createElement('option');option.value=slot;option.textContent=slot;slotsList.append(option)});
+        availabilityHint.textContent=data.slots?.length?'Escolha um dos horários disponíveis na lista. O agendamento será confirmado pelo salão.':'Não há horários livres para a duração total dos serviços nessa data. Escolha outra data.';
+      }catch(err){slotsList.innerHTML='<option value="">Não foi possível carregar os horários</option>';availabilityHint.textContent=err.message||'Não foi possível consultar a agenda agora.'}
     }
     document.getElementById('addAnotherService').addEventListener('click',()=>document.getElementById('serviceCatalog').scrollIntoView({behavior:'smooth',block:'start'}));
     dateInput.addEventListener('change',loadAvailableSlots);timeInput.addEventListener('change',explainSelectedTime);
