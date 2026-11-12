@@ -70,7 +70,7 @@ export async function onRequest({request, env}) {
     const intervalRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='slot_interval_minutes'").first();
     const interval=Math.min(120,Math.max(15,Number(intervalRow?.setting_value)||30));
     const busy=await env.DB.prepare("SELECT starts_at,ends_at FROM appointments WHERE status IN ('requested','confirmed') AND substr(starts_at,1,10)=? UNION ALL SELECT starts_at,ends_at FROM blocked_periods WHERE substr(starts_at,1,10)=?").bind(date,date).all();
-    const busyRanges=(busy.results||[]).map(x=>[Date.parse(x.starts_at),Date.parse(x.ends_at)]).filter(x=>Number.isFinite(x[0])&&Number.isFinite(x[1]));
+    const busyRanges=(busy.results||[]).map(x=>{const start=Date.parse(x.starts_at),end=x.ends_at?Date.parse(x.ends_at):start+1;return [start,end]}).filter(x=>Number.isFinite(x[0])&&Number.isFinite(x[1]));
     const slots=[];
     for(let m=open;m+serviceRow.duration_minutes<=close;m+=interval){
       const hh=String(Math.floor(m/60)).padStart(2,"0"), mm=String(m%60).padStart(2,"0");
@@ -107,8 +107,8 @@ export async function onRequest({request, env}) {
       const intervalRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='slot_interval_minutes'").first();
       const interval=Math.min(120,Math.max(15,Number(intervalRow?.setting_value)||30));
       if(startMin<toMin(hours.open)||startMin+serviceRow.duration_minutes>toMin(hours.close)||(startMin-toMin(hours.open))%interval!==0) return json({error:"Esse horário está fora da agenda configurada."},409);
-      const inserted=await env.DB.prepare("INSERT INTO appointments (id,customer_name,customer_phone,service_id,starts_at,ends_at,status,customer_notes) SELECT ?,?,?,?,?,?,'requested',? WHERE NOT EXISTS (SELECT 1 FROM appointments WHERE status IN ('requested','confirmed') AND starts_at < ? AND ends_at > ?) AND NOT EXISTS (SELECT 1 FROM blocked_periods WHERE starts_at < ? AND ends_at > ?)")
-        .bind(id,name,phone,service,startsAt,endsAt,notes,endsAt,startsAt,endsAt,startsAt).run();
+      const inserted=await env.DB.prepare("INSERT INTO appointments (id,customer_name,customer_phone,service_id,starts_at,ends_at,status,customer_notes) SELECT ?,?,?,?,?,?,'requested',? WHERE NOT EXISTS (SELECT 1 FROM appointments WHERE status IN ('requested','confirmed') AND ((starts_at < ? AND ends_at > ?) OR (ends_at IS NULL AND starts_at = ?))) AND NOT EXISTS (SELECT 1 FROM blocked_periods WHERE starts_at < ? AND ends_at > ?)")
+        .bind(id,name,phone,service,startsAt,endsAt,notes,endsAt,startsAt,startsAt,endsAt,startsAt).run();
       if(!inserted.meta?.changes) return json({error:"Esse horário acabou de ficar indisponível. Escolha outro horário."},409);
     } else {
       await env.DB.prepare("INSERT INTO appointments (id, customer_name, customer_phone, service_id, starts_at, status, customer_notes) VALUES (?, ?, ?, ?, ?, 'requested', ?)")
@@ -119,7 +119,7 @@ export async function onRequest({request, env}) {
   if (path === "/admin/login" && request.method === "POST") {
     let body; try { body=await request.json(); } catch { return json({error:"Dados inválidos."},400); }
     if (!body || typeof body !== "object" || Array.isArray(body)) return json({error:"Dados inválidos."},400);
-    if (!env.ADMIN_PASSWORD || !env.SESSION_SECRET) return json({error:"Configure ADMIN_PASSWORD e SESSION_SECRET nos segredos do projeto."},503);
+    if (!env.ADMIN_PASSWORD || env.ADMIN_PASSWORD.length<12 || !env.SESSION_SECRET || env.SESSION_SECRET.length<32) return json({error:"Configure ADMIN_PASSWORD com ao menos 12 caracteres e SESSION_SECRET com ao menos 32 caracteres."},503);
     const supplied=cleanText(body.password,200);
     const ip = request.headers.get("CF-Connecting-IP") || "unknown";
     const ipHash = await hashValue(ip);
