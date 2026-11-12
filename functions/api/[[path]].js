@@ -66,7 +66,7 @@ export async function onRequest({request, env}) {
     if((rows.results||[]).length!==serviceIds.length || (rows.results||[]).some(x=>!x.is_active)) return json({error:"Um dos serviços não está disponível."},400);
     const duration=(rows.results||[]).reduce((sum,x)=>sum+(Number(x.duration_minutes)||60),0);
     const hoursRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='weekly_hours'").first();
-    const defaultWeekly={"0":null,"1":{open:"09:00",close:"20:00"},"2":{open:"09:00",close:"20:00"},"3":{open:"09:00",close:"20:00"},"4":{open:"09:00",close:"20:00"},"5":{open:"09:00",close:"20:00"},"6":{open:"09:00",close:"20:00"}};
+    const defaultWeekly={"0":null,"1":{open:"08:00",close:"20:00"},"2":{open:"08:00",close:"20:00"},"3":{open:"08:00",close:"20:00"},"4":{open:"08:00",close:"20:00"},"5":{open:"08:00",close:"20:00"},"6":{open:"08:00",close:"20:00"}};
     let weekly=defaultWeekly; try { if(hoursRow?.setting_value) weekly=JSON.parse(hoursRow.setting_value); } catch { weekly=defaultWeekly; }
     weekly=weekly||defaultWeekly;
     const [year,month,day]=date.split("-").map(Number), dayDate=new Date(Date.UTC(year,month-1,day));
@@ -114,7 +114,7 @@ export async function onRequest({request, env}) {
     const primary=ordered[0],serviceNames=ordered.map(x=>x.name),id=crypto.randomUUID();
     const storedNotes="[[SERVICES:"+JSON.stringify(serviceNames)+"]]"+(notes?" | Observações: "+notes:"");
     const hoursRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='weekly_hours'").first();
-    const defaultWeekly={"0":null,"1":{open:"09:00",close:"20:00"},"2":{open:"09:00",close:"20:00"},"3":{open:"09:00",close:"20:00"},"4":{open:"09:00",close:"20:00"},"5":{open:"09:00",close:"20:00"},"6":{open:"09:00",close:"20:00"}};
+    const defaultWeekly={"0":null,"1":{open:"08:00",close:"20:00"},"2":{open:"08:00",close:"20:00"},"3":{open:"08:00",close:"20:00"},"4":{open:"08:00",close:"20:00"},"5":{open:"08:00",close:"20:00"},"6":{open:"08:00",close:"20:00"}};
     let weekly=defaultWeekly;try{if(hoursRow?.setting_value)weekly=JSON.parse(hoursRow.setting_value)}catch{weekly=defaultWeekly}
     weekly=weekly||defaultWeekly;
     let endsAt=null;
@@ -205,7 +205,7 @@ if (path === "/admin/config" && request.method === "GET") {
         env.DB.prepare("SELECT setting_key,setting_value FROM salon_settings").all()
       ]);
       const config={}; for(const row of settings.results||[]){try{config[row.setting_key]=JSON.parse(row.setting_value)}catch{config[row.setting_key]=row.setting_value}}
-      if(!config.weekly_hours||typeof config.weekly_hours!=="object") config.weekly_hours={"0":null,"1":{open:"09:00",close:"20:00"},"2":{open:"09:00",close:"20:00"},"3":{open:"09:00",close:"20:00"},"4":{open:"09:00",close:"20:00"},"5":{open:"09:00",close:"20:00"},"6":{open:"09:00",close:"20:00"}};
+      if(!config.weekly_hours||typeof config.weekly_hours!=="object") config.weekly_hours={"0":null,"1":{open:"08:00",close:"20:00"},"2":{open:"08:00",close:"20:00"},"3":{open:"08:00",close:"20:00"},"4":{open:"08:00",close:"20:00"},"5":{open:"08:00",close:"20:00"},"6":{open:"08:00",close:"20:00"}};
       config.service_prices={...DEFAULT_SERVICE_PRICES,...(config.service_prices||{})};
       config.service_deposit_percents=config.service_deposit_percents||{};
       return json({services:services.results||[],settings:config});
