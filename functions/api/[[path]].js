@@ -127,18 +127,11 @@ export async function onRequest({request, env}) {
   if (path === "/admin/login" && request.method === "POST") {
     let body; try { body=await request.json(); } catch { return json({error:"Dados inválidos."},400); }
     if (!body || typeof body !== "object" || Array.isArray(body)) return json({error:"Dados inválidos."},400);
-    if (!env.ADMIN_PASSWORD || env.ADMIN_PASSWORD.length<12 || !env.SESSION_SECRET || env.SESSION_SECRET.length<32) return json({error:"Diagnóstico temporário: ADMIN_PASSWORD presente="+Boolean(env.ADMIN_PASSWORD)+", tamanho="+(env.ADMIN_PASSWORD?.length||0)+"; SESSION_SECRET presente="+Boolean(env.SESSION_SECRET)+", tamanho="+(env.SESSION_SECRET?.length||0)+"; DB presente="+Boolean(env.DB)+". Não compartilhe valores de senhas."},503);
+    if (!env.ADMIN_PASSWORD || env.ADMIN_PASSWORD.length<12 || !env.SESSION_SECRET || env.SESSION_SECRET.length<32) return json({error:"A configuração de acesso administrativo está incompleta. Verifique as variáveis secretas no Cloudflare."},503);
     const supplied=cleanText(body.password,200);
-    const ip = request.headers.get("CF-Connecting-IP") || "unknown";
-    const ipHash = await hashValue(ip);
-    const attempts = await env.DB.prepare("SELECT COUNT(*) AS total FROM admin_login_attempts WHERE ip_hash=? AND attempted_at >= datetime('now','-15 minutes')").bind(ipHash).first();
-    if ((attempts?.total || 0) >= 8) return json({error:"Muitas tentativas. Aguarde 15 minutos antes de tentar novamente."},429);
     if (supplied.length !== env.ADMIN_PASSWORD.length || supplied !== env.ADMIN_PASSWORD) {
-      await env.DB.prepare("INSERT INTO admin_login_attempts (ip_hash) VALUES (?)").bind(ipHash).run();
       return json({error:"Senha incorreta."},401);
     }
-    await env.DB.prepare("DELETE FROM admin_login_attempts WHERE ip_hash=?").bind(ipHash).run();
-    await env.DB.prepare("DELETE FROM admin_login_attempts WHERE attempted_at < datetime('now','-1 day')").run();
     const token=await makeSession(env.SESSION_SECRET);
     return json({ok:true},200,{ "set-cookie":COOKIE+"="+token+"; HttpOnly; Secure; SameSite=Strict; Path=/api/admin; Max-Age="+SESSION_SECONDS });
   }
