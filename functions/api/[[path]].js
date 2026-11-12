@@ -127,8 +127,6 @@ export async function onRequest({request, env}) {
       if(blocked)return json({error:"Este horário está bloqueado"+(blocked.reason?": "+blocked.reason:"")+". Escolha outro horário."},409);
       const inserted=await env.DB.prepare("INSERT INTO appointments (id,customer_name,customer_phone,service_id,starts_at,ends_at,status,customer_notes) SELECT ?,?,?,?,?,?,'requested',? WHERE NOT EXISTS (SELECT 1 FROM appointments WHERE status IN ('requested','confirmed') AND ((starts_at < ? AND ends_at > ?) OR (ends_at IS NULL AND starts_at = ?))) AND NOT EXISTS (SELECT 1 FROM blocked_periods WHERE starts_at < ? AND ends_at > ?)").bind(id,name,phone,primary.id,startsAt,endsAt,storedNotes,endsAt,startsAt,startsAt,endsAt,startsAt).run();
       if(!inserted.meta?.changes)return json({error:"Este horário acabou de ficar indisponível. Escolha outro horário."},409);
-    }else{
-      await env.DB.prepare("INSERT INTO appointments (id,customer_name,customer_phone,service_id,starts_at,status,customer_notes) VALUES (?,?,?,?,?,'requested',?)").bind(id,name,phone,primary.id,startsAt,storedNotes).run();
     }
     return json({ok:true,id,services:serviceNames,duration_minutes:duration,message:"Solicitação recebida. O salão ainda precisa confirmar o horário."},201);
   }
