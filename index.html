@@ -227,7 +227,7 @@
             'luzes':'Iluminação dos cabelos com mechas para criar profundidade e realçar o visual.',
             'relaxamento':'Procedimento para suavizar a curvatura dos fios e ajudar no controle do volume.'
           };
-          const description=document.createElement('span');description.textContent=descriptions[key]||'Conheça este serviço e consulte os detalhes com o salão.';description.style.cssText='display:block;margin-top:5px;color:#c6bba9;font:12px/1.45 Arial,sans-serif';
+          const description=document.createElement('span');description.textContent=service.description||descriptions[key]||'Conheça este serviço e consulte os detalhes com o salão.';description.style.cssText='display:block;margin-top:5px;color:#c6bba9;font:12px/1.45 Arial,sans-serif';
           const p=Number(window.bookingServicePercents[service.id]??percent)||0,amount=Number(window.bookingServicePrices[service.id])||0;
           const price=document.createElement('span');price.textContent='Valor: '+money(amount);price.style.cssText='display:block;margin-top:9px;color:#d6b46a;font-size:14px;font-weight:600';
           const signal=document.createElement('span');signal.textContent=p>0?'SINAL '+p+'%  •  '+money(Math.round(amount*p)/100):'SEM SINAL';signal.style.cssText=p>0?'display:inline-flex;align-items:center;margin-top:8px;padding:6px 9px;border:1px solid #d6b46a;border-radius:20px;background:#d6b46a;color:#17120b;font:700 11px Arial,sans-serif;letter-spacing:.3px':'display:inline-flex;align-items:center;margin-top:8px;padding:6px 9px;border:1px solid #76664b;border-radius:20px;color:#d6b46a;font:600 10px Arial,sans-serif';
