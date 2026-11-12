@@ -44,7 +44,30 @@ body{background:radial-gradient(ellipse at 50% -20%,#241a0e 0,#0b0a09 55%);color
 .status{display:inline-flex;padding:6px 9px;border:1px solid #8b6b35;border-radius:20px}
 @media(max-width:700px){.panel{padding:16px}.head .row{align-items:center}}
 
-.appointment-filters{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:18px 0 14px}.appointment-filter{display:flex;align-items:center;justify-content:center;gap:7px;min-width:0;padding:11px 8px;background:#171410;border:1px solid #59482f;border-radius:10px;color:#c4b8a6;font-size:12px;font-weight:700;cursor:pointer}.appointment-filter span{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 5px;border-radius:20px;background:#302719;color:#e7ca87;font-size:11px}.appointment-filter.active{background:linear-gradient(135deg,#e7ca87,#c39a4f);border-color:#f0d99e;color:#17120b}.appointment-filter.active span{background:#17120b;color:#f0d99e}@media(max-width:600px){.appointment-filters{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.appointment-filter{font-size:11px;padding:10px 5px}.appointment-filter:last-child{grid-column:1/-1}}</style></head><body><header class="head"><div class="wrap row"><div><strong>Transformação e Beleza Hair</strong><span>PAINEL ADMINISTRATIVO • ARCANY DIGITAL</span></div><a class="btn alt" href="/">Área do cliente</a></div></header>
+.appointment-filters{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:18px 0 14px}.appointment-filter{display:flex;align-items:center;justify-content:center;gap:7px;min-width:0;padding:11px 8px;background:#171410;border:1px solid #59482f;border-radius:10px;color:#c4b8a6;font-size:12px;font-weight:700;cursor:pointer}.appointment-filter span{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 5px;border-radius:20px;background:#302719;color:#e7ca87;font-size:11px}.appointment-filter.active{background:linear-gradient(135deg,#e7ca87,#c39a4f);border-color:#f0d99e;color:#17120b}.appointment-filter.active span{background:#17120b;color:#f0d99e}@media(max-width:600px){.appointment-filters{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.appointment-filter{font-size:11px;padding:10px 5px}.appointment-filter:last-child{grid-column:1/-1}}
+/* Identificação visual dos status dos agendamentos */
+.appointment-filter[data-status="requested"]{border-color:#315f9b;color:#a9c9f5;background:#111d2d}
+.appointment-filter[data-status="confirmed"]{border-color:#8b6b35;color:#e7ca87;background:#211b10}
+.appointment-filter[data-status="cancelled"]{border-color:#8f3e45;color:#f0a6aa;background:#291417}
+.appointment-filter[data-status="completed"]{border-color:#367b58;color:#a5e0bd;background:#10251a}
+.appointment-filter[data-status="all"]{border-color:#59482f}
+.appointment-filter[data-status="requested"].active{background:#244c7e;border-color:#6ca7f3;color:#fff}
+.appointment-filter[data-status="confirmed"].active{background:#75551d;border-color:#d6b46a;color:#fff}
+.appointment-filter[data-status="cancelled"].active{background:#7b2932;border-color:#e87982;color:#fff}
+.appointment-filter[data-status="completed"].active{background:#216342;border-color:#65c58e;color:#fff}
+.status{font-weight:700}
+.status-requested{background:#142b46;border-color:#477fbd;color:#b9d7ff}
+.status-confirmed{background:#302512;border-color:#a9853e;color:#f1d28d}
+.status-cancelled{background:#35171b;border-color:#b64e58;color:#ffc0c4}
+.status-completed{background:#153222;border-color:#42966a;color:#b8f0ce}
+.status-no_show{background:#30202e;border-color:#956b91;color:#e6c3e2}
+.status-select{border:1px solid;border-radius:8px;padding:9px;font-weight:600}
+.status-select-requested{background:#142b46;border-color:#477fbd;color:#b9d7ff}
+.status-select-confirmed{background:#302512;border-color:#a9853e;color:#f1d28d}
+.status-select-cancelled{background:#35171b;border-color:#b64e58;color:#ffc0c4}
+.status-select-completed{background:#153222;border-color:#42966a;color:#b8f0ce}
+.status-select-no_show{background:#30202e;border-color:#956b91;color:#e6c3e2}
+</style></head><body><header class="head"><div class="wrap row"><div><strong>Transformação e Beleza Hair</strong><span>PAINEL ADMINISTRATIVO • ARCANY DIGITAL</span></div><a class="btn alt" href="/">Área do cliente</a></div></header>
 <main class="wrap main"><section id="login"><h1>Acesso da proprietária</h1><p class="muted">Área privada para acompanhar as solicitações de agendamento.</p><form class="panel" id="loginForm"><div class="field"><label for="password">Senha administrativa</label><div class="password-wrap"><input id="password" type="password" autocomplete="current-password" required><button class="password-toggle" id="togglePassword" type="button" aria-label="Mostrar senha" aria-pressed="false">Mostrar</button></div></div><button class="btn">Entrar no painel</button><p id="loginError" class="error"></p></form></section>
 <div id="adminTabs" class="admin-tabs hidden" role="tablist" aria-label="Seções do painel"><button type="button" class="admin-tab active" data-tab="appointmentsTab" role="tab" aria-selected="true">Agendamentos</button><button type="button" class="admin-tab" data-tab="servicesTab" role="tab" aria-selected="false">Serviços</button><button type="button" class="admin-tab" data-tab="scheduleTab" role="tab" aria-selected="false">Horários</button></div><section id="dashboard" class="hidden"><div id="appointmentsTab"><div class="row"><div><h1>Agendamentos</h1><p class="muted">Solicitações e status dos atendimentos.</p></div></div><div class="row" style="margin-top:20px"><button class="btn" id="refresh">Atualizar agenda</button><span class="muted" id="count"></span></div><div id="stats" class="stats"></div><div class="appointment-filters" role="tablist" aria-label="Agendamentos por situação"><button type="button" class="appointment-filter active" data-status="requested">Pendentes <span id="tabCount-requested">0</span></button><button type="button" class="appointment-filter" data-status="confirmed">Confirmados <span id="tabCount-confirmed">0</span></button><button type="button" class="appointment-filter" data-status="cancelled">Cancelados <span id="tabCount-cancelled">0</span></button><button type="button" class="appointment-filter" data-status="completed">Concluídos <span id="tabCount-completed">0</span></button><button type="button" class="appointment-filter" data-status="all">Todos <span id="tabCount-all">0</span></button></div><div class="tools"><input id="search" type="search" placeholder="Buscar por cliente, telefone ou serviço" aria-label="Buscar agendamentos"></div><div id="appointments" class="list"></div><p class="muted">Solicitações recebidas continuam pendentes até a confirmação do salão.</p></div></section>
 <section id="configPanel" class="panel hidden"><div class="row"><h2 style="font:28px Georgia;font-weight:400;color:#d6b46a">Configurações</h2><button class="btn alt" id="closeConfig">Voltar aos agendamentos</button></div><div id="scheduleTab" class="hidden"><h3 style="font:20px Georgia;font-weight:400">Horários de funcionamento</h3><p class="muted">Defina os dias e o expediente de cada um. Se houver almoço ou pausa fixa, informe o início e o fim. Esse intervalo ficará indisponível para os clientes.</p><div id="hoursEditor"></div><p class="muted">Para compromissos ou reservas em datas específicas, use a seção de períodos reservados abaixo.</p></div><div id="servicesTab" class="hidden"><div class="row" style="margin-top:24px"><h3 style="font:20px Georgia;font-weight:400">Duração dos serviços</h3><select id="durationUnit" aria-label="Unidade da duração"><option value="hours">Horas</option><option value="minutes">Minutos</option></select></div><p class="muted" id="durationHint">Informe a duração em horas. Todos começam com 1 hora e você pode ajustar cada serviço.</p><div id="durationEditor" class="duration-grid"></div>
@@ -86,7 +109,7 @@ function render(){
  rows.forEach(a=>{
   const el=document.createElement('article');el.className='item';
   const top=document.createElement('div');top.className='row';
-  const status=document.createElement('span');status.className='status';status.textContent=statusLabels[a.status]||a.status;
+  const status=document.createElement('span');status.className='status status-'+a.status;status.textContent=statusLabels[a.status]||a.status;
   const date=document.createElement('span');date.className='muted';const parsed=new Date(a.starts_at);date.textContent=Number.isNaN(parsed.getTime())?a.starts_at:parsed.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short',timeZone:'America/Sao_Paulo'});
   top.append(status,date);
   const title=document.createElement('h3');title.textContent=a.customer_name;
@@ -94,7 +117,7 @@ function render(){
   const phone=document.createElement('p');phone.textContent='Telefone: '+a.customer_phone;
   const notes=document.createElement('p');notes.textContent=a.customer_notes||'Sem observações.';
   const actions=document.createElement('div');actions.className='row';actions.style.marginTop='12px';
-  const select=document.createElement('select');select.setAttribute('aria-label','Status do agendamento');
+  const select=document.createElement('select');select.className='status-select status-select-'+a.status;select.setAttribute('aria-label','Status do agendamento');select.addEventListener('change',()=>{select.className='status-select status-select-'+select.value});
   Object.entries(statusLabels).forEach(([value,label])=>{const option=document.createElement('option');option.value=value;option.textContent=label;select.append(option)});
   select.value=a.status;
   const save=document.createElement('button');save.className='btn save';save.textContent='Salvar status';
