@@ -48,6 +48,43 @@
     .btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
     footer{background:#100e0d;color:var(--muted);border-top:1px solid var(--line)}
     footer a{color:var(--gold)}
+  
+    /* Visual 3D leve e responsivo, sem bibliotecas ou imagens externas */
+    html,body{max-width:100%;overflow-x:hidden}
+    img,svg,video{max-width:100%}
+    .wrap{width:min(1120px,calc(100% - 32px))}
+    .service,.form,.hero-art,.about-mark{box-shadow:0 14px 34px #0005,inset 0 1px #ffffff12}
+    .service{position:relative;overflow:hidden;transition:transform .22s ease,border-color .22s ease;min-width:0}
+    .service:hover{transform:translateY(-4px);border-color:var(--gold)}
+    .service-catalog{width:100%;min-width:0;grid-template-columns:repeat(auto-fit,minmax(min(100%,155px),1fr))!important}
+    .service-catalog button{min-width:0;overflow:hidden;box-shadow:0 12px 25px #0005,inset 0 1px #ffffff18;transition:transform .2s ease,border-color .2s ease}
+    .service-catalog button:hover,.service-catalog button:focus-visible{transform:translateY(-3px);border-color:var(--gold)!important}
+    .service-art{height:112px;width:100%;position:relative;overflow:hidden;display:grid;place-items:center;border-radius:10px;background:radial-gradient(circle at 50% 35%,#80613b 0,#39291f 48%,#171311 100%);box-shadow:inset 0 0 28px #0008}
+    .service-art:before,.service-art:after{content:"";position:absolute;border:1px solid #d6b46a66;border-radius:50%;width:76px;height:76px;animation:art-orbit 9s linear infinite}
+    .service-art:after{width:100px;height:100px;border-color:#ffffff20;animation-duration:14s;animation-direction:reverse}
+    .service-art-orb{position:absolute;color:#f4d994;font-size:25px;transform:translate(35px,-27px);text-shadow:0 0 15px #d6b46a;animation:art-float 3s ease-in-out infinite}
+    .service-art-symbol{position:relative;z-index:1;font-size:48px;filter:drop-shadow(0 8px 7px #0009);animation:art-float 3.8s ease-in-out infinite}
+    .service-catalog button strong{overflow-wrap:anywhere}
+    .hero-art{box-shadow:0 20px 50px #0008,inset 0 0 35px #d6b46a12}
+    .btn{min-height:46px;touch-action:manipulation}
+    input,select,textarea,button{max-width:100%;min-width:0}
+    @keyframes art-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+    @keyframes art-orbit{to{transform:rotate(360deg)}}
+    @media(max-width:760px){
+      .wrap{width:calc(100% - 28px)}
+      .top{padding:14px 0}.nav{align-items:flex-start;flex-wrap:wrap}.links{width:100%;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.links a{font-size:11px}
+      .hero{gap:24px;padding:38px 0}.hero h1{font-size:clamp(36px,10vw,48px)}.hero-art{min-height:230px}
+      section{padding:48px 0}.section-head h2,.about h2{font-size:32px}
+      .services{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.service{padding:15px;min-height:0}.service h3{font-size:19px}
+      .about .wrap{width:calc(100% - 28px)}
+      .booking{gap:22px}.form{padding:16px}.form-grid{gap:13px}
+      .service-catalog{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;margin:18px 0!important}
+      .service-catalog button{padding:9px!important}.service-art{height:96px}
+      .actions .btn{flex:1 1 100%}
+      .foot{gap:10px}
+    }
+    @media(max-width:360px){.services{grid-template-columns:1fr}.links a{font-size:10px}.service-catalog{grid-template-columns:repeat(2,minmax(0,1fr))!important}.service-art{height:82px}}
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition:none!important}}
   </style>
 </head>
 <body>
@@ -90,7 +127,7 @@
         <div class="field"><label for="name">Seu nome</label><input id="name" type="text" placeholder="Nome completo" required></div>
         <div class="field"><label for="phone">Seu telefone</label><input id="phone" type="tel" placeholder="(00) 00000-0000" required></div>
         <div class="field full"><label for="details">Observações (opcional)</label><textarea id="details" rows="3" placeholder="Conte um pouco sobre o que deseja..."></textarea></div>
-      </div><img id="selectedServiceImage" alt="Imagem do serviço selecionado" hidden style="width:100%;max-width:320px;aspect-ratio:16/9;object-fit:cover;border-radius:12px;margin:10px 0"><div id="priceNotice" class="notice" hidden></div><p id="depositNotice" class="notice" hidden></p><p class="notice">Seus dados serão usados para responder à solicitação de agendamento. Consulte nossa <a href="privacidade.html" style="color:var(--gold)">política de privacidade</a>. O envio não confirma a reserva. O salão verificará e confirmará o horário.</p><button class="btn" type="submit">Enviar solicitação pelo WhatsApp</button></form>
+      </div><div id="priceNotice" class="notice" hidden></div><p id="depositNotice" class="notice" hidden></p><p class="notice">Seus dados serão usados para responder à solicitação de agendamento. Consulte nossa <a href="privacidade.html" style="color:var(--gold)">política de privacidade</a>. O envio não confirma a reserva. O salão verificará e confirmará o horário.</p><button class="btn" type="submit">Enviar solicitação pelo WhatsApp</button></form>
     </div></section>
   </main>
   <footer><div class="wrap foot"><span>© <span id="year"></span> Transformação e Beleza Hair • Cátia Souza</span><span><a href="privacidade.html">Privacidade</a> · <a href="admin.html">Área da proprietária</a> · Juiz de Fora/MG</span></div></footer>
@@ -108,10 +145,7 @@
       const signal=Math.round(price*percent)/100, remaining=price-signal;
       box.hidden=false;
       box.textContent='Valor demonstrativo do serviço: '+money(price)+'. '+(percent>0?'Sinal de '+percent+'%: '+money(signal)+'. Restante após o sinal: '+money(remaining)+'. ':'')+'Preço ilustrativo, sujeito à confirmação pelo salão.';
-      const selectedImage=document.getElementById('selectedServiceImage');
-      if(selectedImage){selectedImage.src='/api/service-images/'+service;selectedImage.hidden=false;selectedImage.onerror=()=>{selectedImage.hidden=true}}
-
-    }
+}
     async function loadDepositNotice(){
       const notice=document.getElementById('depositNotice');
       try{
@@ -124,12 +158,12 @@
           window.bookingServicesById[service.id]=service.name;
           const option=document.createElement('option');option.value=service.id;option.textContent=service.name;serviceInput.append(option);
           const card=document.createElement('button');card.type='button';card.style.cssText='text-align:left;background:#191614;border:1px solid #59482f;border-radius:14px;padding:10px;color:#f5eee3;cursor:pointer';
-          const image=document.createElement('img');image.src=service.image_url;image.alt='Ilustração de '+service.name;image.loading='lazy';image.style.cssText='width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:9px;background:#29231e';image.onerror=()=>{image.style.display='none'};
+          const art=document.createElement('div');art.className='service-art';art.setAttribute('aria-hidden','true');const symbols={'Mega Hair':'💇🏽‍♀️','Hidratação':'💧','Progressivas':'✨','Corte':'✂️','Escova':'💨','Luzes':'🌟','Relaxamento':'🌿'};const symbol=document.createElement('span');symbol.className='service-art-symbol';symbol.textContent=symbols[service.name]||'✦';const orb=document.createElement('span');orb.className='service-art-orb';orb.textContent='✦';art.append(orb,symbol);
           const title=document.createElement('strong');title.textContent=service.name;title.style.cssText='display:block;margin-top:9px;font-size:14px';
           const price=document.createElement('span');price.textContent=money(window.bookingServicePrices[service.id]);price.style.cssText='display:block;margin-top:5px;color:#d6b46a;font-size:13px';
           const p=Number(window.bookingServicePercents[service.id]??percent)||0,amount=Number(window.bookingServicePrices[service.id])||0;
           const signal=document.createElement('small');signal.textContent=p>0?'Sinal '+p+'%: '+money(Math.round(amount*p)/100):'Sinal não exigido';signal.style.cssText='display:block;margin-top:4px;color:#c6bba9;font-size:11px';
-          card.append(image,title,price,signal);card.addEventListener('click',()=>{serviceInput.value=service.id;serviceInput.dispatchEvent(new Event('change',{bubbles:true}));document.getElementById('bookingForm').scrollIntoView({behavior:'smooth',block:'start'})});catalog.append(card);
+          card.append(art,title,price,signal);card.addEventListener('click',()=>{serviceInput.value=service.id;serviceInput.dispatchEvent(new Event('change',{bubbles:true}));document.getElementById('bookingForm').scrollIntoView({behavior:'smooth',block:'start'})});catalog.append(card);
         });
         updateSelectedPrice();
         if(percent>0||Object.values(window.bookingServicePercents).some(value=>Number(value)>0)){notice.hidden=false;notice.textContent='O sinal pode variar conforme o serviço. Confira o percentual e o valor calculado após selecionar o procedimento. Envie o comprovante pelo WhatsApp; o horário só será confirmado pelo salão após a conferência.'}
