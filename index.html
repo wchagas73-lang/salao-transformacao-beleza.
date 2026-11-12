@@ -326,7 +326,6 @@
     }
     document.getElementById('bookingForm').addEventListener('submit',async function(e){
       e.preventDefault();
-      let whatsappWindow=null;try{whatsappWindow=window.open('about:blank','_blank')}catch{}
       clearFieldErrors();await window.bookingDepositPromise;
       const v=id=>document.getElementById(id).value.trim();
       const errors=[];
@@ -354,10 +353,8 @@
         resultBox.style.cssText='display:block;width:100%;box-sizing:border-box;margin:18px 0;padding:22px;border:1px solid #d6b46a;border-radius:16px;background:linear-gradient(145deg,#211a10,#12100d);text-align:center';
         const confirmation=document.createElement('div');confirmation.innerHTML='<div style="font-size:32px;margin-bottom:10px">✅</div><strong style="display:block;color:#f5eee3;font:700 17px/1.4 Arial,sans-serif;margin-bottom:8px">Solicitação registrada!</strong><p style="margin:0 0 18px;color:#d8cbb7;font:14px/1.6 Arial,sans-serif">Agora falta apenas avisar o salão. Toque no botão abaixo e, quando o WhatsApp abrir, toque em <strong style="color:#f5d98e">Enviar</strong>.</p>';
         const whatsappLink=document.createElement('a');whatsappLink.href=whatsappUrl;whatsappLink.target='_self';whatsappLink.rel='noopener noreferrer';whatsappLink.textContent='💬  ABRIR WHATSAPP E ENVIAR';whatsappLink.style.cssText='display:flex;width:100%;box-sizing:border-box;min-height:56px;align-items:center;justify-content:center;padding:16px 18px;border-radius:12px;background:#d6b46a;color:#17120b;font:700 15px Arial,sans-serif;text-decoration:none';
-        resultBox.append(confirmation,whatsappLink);button.hidden=true;
-        if(whatsappWindow){whatsappWindow.location.href=whatsappUrl}else{whatsappLink.target='_blank';whatsappLink.rel='noopener noreferrer';whatsappLink.textContent='💬 ABRIR WHATSAPP E ENVIAR';whatsappLink.focus()}
+        resultBox.append(confirmation,whatsappLink);button.hidden=true;whatsappLink.focus();
       }catch(err){
-        if(whatsappWindow&&!whatsappWindow.closed)whatsappWindow.close();
         const msg=err.message||'Não foi possível registrar a solicitação. Tente outro horário.';
         const hint=document.getElementById('availabilityHint');hint.textContent=msg;hint.scrollIntoView({behavior:'smooth',block:'center'});
         await loadAvailableSlots();
