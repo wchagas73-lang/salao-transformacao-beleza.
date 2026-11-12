@@ -18,6 +18,8 @@ def check_js(source: str, label: str) -> None:
 
 api = ROOT / "functions" / "api" / "[[path]].js"
 check_js(api.read_text(encoding="utf-8"), str(api.relative_to(ROOT)))
+middleware = ROOT / "functions" / "_middleware.js"
+check_js(middleware.read_text(encoding="utf-8"), str(middleware.relative_to(ROOT)))
 
 for html_name in ("index.html", "admin.html"):
     html = (ROOT / html_name).read_text(encoding="utf-8")
