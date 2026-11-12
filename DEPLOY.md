@@ -10,12 +10,12 @@ O site público continua como demonstração com solicitação via WhatsApp. O p
 - `wrangler.toml`: configuração inicial do binding D1. Substituir o ID de exemplo pelo ID real.
 
 ## Configuração necessária no Cloudflare
-1. Criar um projeto Pages conectado a este repositório, com diretório de saída `/` e sem comando de build.
+1. Criar um projeto Pages conectado a este repositório. Framework: `None`. Build command: deixar em branco. Build output directory: `.`. Root directory: raiz do repositório.
 2. Criar banco D1 chamado `transformacao-beleza-db`.
 3. Executar `database/schema.sql` no console SQL do D1.
 4. Em Pages > Settings > Functions > D1 database bindings, adicionar binding `DB` apontando para o banco. O nome do binding precisa ser exatamente `DB`.
 5. Em Pages > Settings > Environment variables and secrets, cadastrar os segredos `ADMIN_PASSWORD` e `SESSION_SECRET`. Use uma senha forte e um segredo aleatório longo, diferentes entre si. Aplicar em Production e Preview conforme necessário.
-6. Fazer novo deploy. O arquivo `wrangler.toml` não contém ID fictício de banco: o vínculo real é feito no painel Cloudflare.
+6. Fazer novo deploy para que o binding e os segredos entrem em vigor.
 
 ## Limitações e cuidados antes de operar
 
