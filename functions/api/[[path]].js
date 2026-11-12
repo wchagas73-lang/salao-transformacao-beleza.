@@ -74,7 +74,9 @@ export async function onRequest({request, env}) {
     const hours=weekly[String(dayDate.getUTCDay())];
     if(!hours || !/^\d{2}:\d{2}$/.test(hours.open||"") || !/^\d{2}:\d{2}$/.test(hours.close||"")) return json({configured:true,slots:[],duration_minutes:duration});
     const toMin=s=>Number(s.slice(0,2))*60+Number(s.slice(3,5)),open=toMin(hours.open),close=toMin(hours.close);
-    const interval=60;
+    const intervalRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='slot_interval_minutes'").first();
+    const savedInterval=Number(intervalRow?.setting_value);
+    const interval=Number.isInteger(savedInterval)&&savedInterval>=1&&savedInterval<=720?savedInterval:60;
     const dayStart=date+"T00:00:00-03:00",nextDay=new Date(Date.UTC(year,month-1,day+1)).toISOString().slice(0,10),dayEnd=nextDay+"T00:00:00-03:00";
     const busy=await env.DB.prepare("SELECT starts_at,ends_at FROM appointments WHERE status IN ('requested','confirmed') AND starts_at < ? AND (ends_at > ? OR (ends_at IS NULL AND starts_at >= ?))").bind(dayEnd,dayStart,dayStart).all();
     const blocked=await env.DB.prepare("SELECT starts_at,ends_at,reason FROM blocked_periods WHERE starts_at < ? AND ends_at > ? ORDER BY starts_at").bind(dayEnd,dayStart).all();
@@ -121,7 +123,9 @@ export async function onRequest({request, env}) {
       if(!hours)return json({error:"O salão não atende neste dia. Escolha outra data."},409);
       const toMin=s=>Number(s.slice(0,2))*60+Number(s.slice(3,5)),startMin=hour*60+minute,endEpoch=Date.parse(startsAt)+duration*60000;
       const endDate=new Date(endEpoch+3*60*60000).toISOString().slice(0,19);endsAt=endDate+"-03:00";
-      const interval=60;
+      const intervalRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='slot_interval_minutes'").first();
+      const savedInterval=Number(intervalRow?.setting_value);
+      const interval=Number.isInteger(savedInterval)&&savedInterval>=1&&savedInterval<=720?savedInterval:60;
       if(startMin<toMin(hours.open)||startMin+duration>toMin(hours.close)||(startMin-toMin(hours.open))%interval!==0)return json({error:"Esse horário está fora da agenda configurada para a duração total dos serviços."},409);
       const blocked=await env.DB.prepare("SELECT reason FROM blocked_periods WHERE starts_at < ? AND ends_at > ? ORDER BY starts_at LIMIT 1").bind(endsAt,startsAt).first();
       if(blocked)return json({error:"Este horário está bloqueado"+(blocked.reason?": "+blocked.reason:"")+". Escolha outro horário."},409);
@@ -224,7 +228,7 @@ if (path === "/admin/config" && request.method === "GET") {
       const servicePercents=body.service_deposit_percents||{};if(!servicePercents||typeof servicePercents!=='object'||Array.isArray(servicePercents))return json({error:'Percentuais individuais inválidos.'},400);for(const [service,percent] of Object.entries(servicePercents)){if(!validServiceIds.has(service)||!Number.isInteger(Number(percent))||Number(percent)<0||Number(percent)>100)return json({error:'Cada sinal individual deve estar entre 0 e 100%.'},400)}
       if(!Number.isInteger(depositPercent)||depositPercent<0||depositPercent>100) return json({error:"O sinal deve ser um percentual inteiro entre 0 e 100."},400);
       const interval=Number(body.slot_interval_minutes);
-      if(![15,30,60].includes(interval)) return json({error:"Intervalo entre opções inválido."},400);
+      if(!Number.isInteger(interval)||interval<1||interval>720) return json({error:"Informe um intervalo inteiro entre 1 e 720 minutos."},400);
       const statements=[
         env.DB.prepare("INSERT INTO salon_settings(setting_key,setting_value,updated_at) VALUES('deposit_percent',?,CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO UPDATE SET setting_value=excluded.setting_value,updated_at=CURRENT_TIMESTAMP").bind(String(depositPercent)),
         env.DB.prepare("INSERT INTO salon_settings(setting_key,setting_value,updated_at) VALUES('service_prices',?,CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO UPDATE SET setting_value=excluded.setting_value,updated_at=CURRENT_TIMESTAMP").bind(JSON.stringify(servicePrices)),
