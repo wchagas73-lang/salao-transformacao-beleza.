@@ -55,7 +55,7 @@ export async function onRequest({request, env}) {
   if (request.method === "GET" && path === "/booking-settings") {
     const row=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='deposit_percent'").first();
     const value=Number(row?.setting_value)||0;
-    const pricesRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='service_prices'").first();let servicePrices=DEFAULT_SERVICE_PRICES;try{if(pricesRow?.setting_value)servicePrices={...DEFAULT_SERVICE_PRICES,...JSON.parse(pricesRow.setting_value)}}catch{};const percentsRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='service_deposit_percents'").first();let servicePercents={};try{servicePercents=JSON.parse(percentsRow?.setting_value||'{}')}catch{};const services=await env.DB.prepare("SELECT id,name FROM services WHERE is_active=1 ORDER BY display_order,name").all();const publicServices=services.results||[];const pricesById={};for(const s of publicServices)pricesById[s.id]=Number(servicePrices[s.id]??servicePrices[s.name]??DEFAULT_SERVICE_PRICES[s.name]??0);return json({deposit_percent:Number.isInteger(value)&&value>=0&&value<=100?value:0,service_prices:pricesById,service_deposit_percents:servicePercents,services:publicServices});
+    const pricesRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='service_prices'").first();let servicePrices=DEFAULT_SERVICE_PRICES;try{if(pricesRow?.setting_value)servicePrices={...DEFAULT_SERVICE_PRICES,...JSON.parse(pricesRow.setting_value)}}catch{};const percentsRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='service_deposit_percents'").first();let servicePercents={};try{servicePercents=JSON.parse(percentsRow?.setting_value||'{}')}catch{};const services=await env.DB.prepare("SELECT id,name,description FROM services WHERE is_active=1 ORDER BY display_order,name").all();const publicServices=services.results||[];const pricesById={};for(const s of publicServices)pricesById[s.id]=Number(servicePrices[s.id]??servicePrices[s.name]??DEFAULT_SERVICE_PRICES[s.name]??0);return json({deposit_percent:Number.isInteger(value)&&value>=0&&value<=100?value:0,service_prices:pricesById,service_deposit_percents:servicePercents,services:publicServices});
   }
   if (request.method === "GET" && path === "/availability") {
     const idsRaw=cleanText(url.searchParams.get("services")||url.searchParams.get("service"),400);
@@ -73,7 +73,7 @@ export async function onRequest({request, env}) {
     if(dayDate.getUTCFullYear()!==year||dayDate.getUTCMonth()!==month-1||dayDate.getUTCDate()!==day) return json({error:"Data inválida."},400);
     const hours=weekly[String(dayDate.getUTCDay())];
     if(!hours || !/^\d{2}:\d{2}$/.test(hours.open||"") || !/^\d{2}:\d{2}$/.test(hours.close||"")) return json({configured:true,slots:[],duration_minutes:duration});
-    const toMin=s=>Number(s.slice(0,2))*60+Number(s.slice(3,5)),open=toMin(hours.open),close=toMin(hours.close);
+    const toMin=s=>Number(s.slice(0,2))*60+Number(s.slice(3,5)),open=toMin(hours.open),close=toMin(hours.close),pauseStart=/^\d{2}:\d{2}$/.test(hours.break_start||"")?toMin(hours.break_start):null,pauseEnd=/^\d{2}:\d{2}$/.test(hours.break_end||"")?toMin(hours.break_end):null;
     const intervalRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='slot_interval_minutes'").first();
     const savedInterval=Number(intervalRow?.setting_value);
     const interval=Number.isInteger(savedInterval)&&savedInterval>=1&&savedInterval<=720?savedInterval:30;
@@ -85,7 +85,8 @@ export async function onRequest({request, env}) {
     const slots=[],options=[];
     for(let m=open;m<=close;m+=interval){
       const hh=String(Math.floor(m/60)).padStart(2,"0"),mm=String(m%60).padStart(2,"0"),label=hh+":"+mm,start=Date.parse(date+"T"+label+":00-03:00"),end=start+duration*60000;
-      const available=start>Date.now()&&m+duration<=close&&!busyRanges.some(([a,b])=>start<b&&end>a);
+      const overlapsPause=pauseStart!==null&&pauseEnd!==null&&m<pauseEnd&&m+duration>pauseStart;
+      const available=start>Date.now()&&m+duration<=close&&!overlapsPause&&!busyRanges.some(([a,b])=>start<b&&end>a);
       options.push({time:label,available});if(available)slots.push(label);
     }
     return json({configured:true,slots,options,duration_minutes:duration,blocked_periods:blockedPeriods});
@@ -126,7 +127,9 @@ export async function onRequest({request, env}) {
       const intervalRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='slot_interval_minutes'").first();
       const savedInterval=Number(intervalRow?.setting_value);
       const interval=Number.isInteger(savedInterval)&&savedInterval>=1&&savedInterval<=720?savedInterval:30;
+      const pauseStart=/^\d{2}:\d{2}$/.test(hours.break_start||"")?toMin(hours.break_start):null,pauseEnd=/^\d{2}:\d{2}$/.test(hours.break_end||"")?toMin(hours.break_end):null;
       if(startMin<toMin(hours.open)||startMin+duration>toMin(hours.close)||(startMin-toMin(hours.open))%interval!==0)return json({error:"Esse horário está fora da agenda configurada para a duração total dos serviços."},409);
+      if(pauseStart!==null&&pauseEnd!==null&&startMin<pauseEnd&&startMin+duration>pauseStart)return json({error:"Esse horário coincide com a pausa do salão. Escolha outro horário."},409);
       const blocked=await env.DB.prepare("SELECT reason FROM blocked_periods WHERE starts_at < ? AND ends_at > ? ORDER BY starts_at LIMIT 1").bind(endsAt,startsAt).first();
       if(blocked)return json({error:"Este horário está bloqueado"+(blocked.reason?": "+blocked.reason:"")+". Escolha outro horário."},409);
       const inserted=await env.DB.prepare("INSERT INTO appointments (id,customer_name,customer_phone,service_id,starts_at,ends_at,status,customer_notes) SELECT ?,?,?,?,?,?,'requested',? WHERE NOT EXISTS (SELECT 1 FROM appointments WHERE status IN ('requested','confirmed') AND ((starts_at < ? AND ends_at > ?) OR (ends_at IS NULL AND starts_at = ?))) AND NOT EXISTS (SELECT 1 FROM blocked_periods WHERE starts_at < ? AND ends_at > ?)").bind(id,name,phone,primary.id,startsAt,endsAt,storedNotes,endsAt,startsAt,startsAt,endsAt,startsAt).run();
@@ -180,13 +183,13 @@ export async function onRequest({request, env}) {
     }
     if(path==="/admin/services" && request.method==="POST"){
       let body;try{body=await request.json()}catch{return json({error:"Dados inválidos."},400)}
-      const name=cleanText(body?.name,80),duration=Number(body?.duration_minutes)||60;
+      const name=cleanText(body?.name,80),description=cleanText(body?.description,500),duration=Number(body?.duration_minutes)||60;
       if(name.length<2)return json({error:"Informe um nome de serviço válido."},400);
       if(!Number.isInteger(duration)||duration<1||duration>720)return json({error:"A duração deve ficar entre 1 e 720 minutos."},400);
       const duplicate=await env.DB.prepare("SELECT id FROM services WHERE lower(name)=lower(?)").bind(name).first();
       if(duplicate)return json({error:"Já existe um serviço com esse nome."},409);
       const id=crypto.randomUUID(),order=await env.DB.prepare("SELECT COALESCE(MAX(display_order),0)+1 AS next FROM services").first();
-      await env.DB.prepare("INSERT INTO services(id,name,duration_minutes,is_active,display_order) VALUES(?,?,?,1,?)").bind(id,name,duration,Number(order?.next)||1).run();
+      await env.DB.prepare("INSERT INTO services(id,name,description,duration_minutes,is_active,display_order) VALUES(?,?,?,?,1,?)").bind(id,name,description,duration,Number(order?.next)||1).run();
       return json({ok:true,service:{id,name,duration_minutes:duration,is_active:1}},201);
     }
     if(path.startsWith("/admin/services/") && request.method==="PATCH"){
@@ -194,6 +197,7 @@ export async function onRequest({request, env}) {
       const current=await env.DB.prepare("SELECT id FROM services WHERE id=?").bind(id).first();if(!current)return json({error:"Serviço não encontrado."},404);
       const updates=[];
       if(body.name!==undefined){const name=cleanText(body.name,80);if(name.length<2)return json({error:"Nome inválido."},400);const duplicate=await env.DB.prepare("SELECT id FROM services WHERE lower(name)=lower(?) AND id<>?").bind(name,id).first();if(duplicate)return json({error:"Já existe outro serviço com esse nome."},409);updates.push(env.DB.prepare("UPDATE services SET name=? WHERE id=?").bind(name,id))}
+      if(body.description!==undefined){const description=cleanText(body.description,500);updates.push(env.DB.prepare("UPDATE services SET description=? WHERE id=?").bind(description,id))}
       if(body.is_active!==undefined){if(typeof body.is_active!=="boolean")return json({error:"Disponibilidade inválida."},400);updates.push(env.DB.prepare("UPDATE services SET is_active=? WHERE id=?").bind(body.is_active?1:0,id))}
       if(body.duration_minutes!==undefined){const duration=Number(body.duration_minutes);if(!Number.isInteger(duration)||duration<1||duration>720)return json({error:"A duração deve ficar entre 1 e 720 minutos."},400);updates.push(env.DB.prepare("UPDATE services SET duration_minutes=? WHERE id=?").bind(duration,id))}
       if(!updates.length)return json({error:"Nenhuma alteração informada."},400);
@@ -201,7 +205,7 @@ export async function onRequest({request, env}) {
     }
 if (path === "/admin/config" && request.method === "GET") {
       const [services,settings]=await Promise.all([
-        env.DB.prepare("SELECT id,name,duration_minutes,is_active FROM services ORDER BY display_order").all(),
+        env.DB.prepare("SELECT id,name,description,duration_minutes,is_active FROM services ORDER BY display_order").all(),
         env.DB.prepare("SELECT setting_key,setting_value FROM salon_settings").all()
       ]);
       const config={}; for(const row of settings.results||[]){try{config[row.setting_key]=JSON.parse(row.setting_value)}catch{config[row.setting_key]=row.setting_value}}
@@ -220,6 +224,8 @@ if (path === "/admin/config" && request.method === "GET") {
         if(!h || !validClock(h.open) || !validClock(h.close,true)) return json({error:"Confira os horários de funcionamento."},400);
         const minutes=s=>Number(s.slice(0,2))*60+Number(s.slice(3,5));
         if(minutes(h.open)>=minutes(h.close)) return json({error:"O fechamento precisa ser posterior à abertura."},400);
+        const hasBreak=Boolean(h.break_start||h.break_end);
+        if(hasBreak&&(!validClock(h.break_start)||!validClock(h.break_end)||minutes(h.break_start)<=minutes(h.open)||minutes(h.break_end)<=minutes(h.break_start)||minutes(h.break_end)>=minutes(h.close))) return json({error:"Confira a pausa: ela deve começar e terminar dentro do expediente."},400);
       }
       const depositPercent=body.deposit_percent===undefined?0:Number(body.deposit_percent);
       const servicePrices=body.service_prices===undefined?{}:body.service_prices;
