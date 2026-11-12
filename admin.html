@@ -108,7 +108,7 @@ async function openConfig(){
    check.addEventListener('change',()=>{open.disabled=!check.checked;close.disabled=!check.checked});
    row.append(name,check,open,close);row.dataset.day=String(i);hours.append(row);
   });
-  const defaults={"Mega Hair":300,"Hidratação":100,"Progressivas":220,"Corte":70,"Escova":60,"Luzes":350,"Relaxamento":150};
+  const defaults={"Mega Hair":500,"Hidratação":90,"Progressivas":350,"Corte":80,"Escova":70,"Luzes":350,"Relaxamento":180};
   const prices=$('priceEditor');prices.innerHTML='';
   (data.services||[]).forEach(service=>{
    const label=document.createElement('label');label.className='duration-item';
