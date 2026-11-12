@@ -115,7 +115,7 @@
         if(!response.ok)return;
         const settings=await response.json();
         const percent=Number(settings.deposit_percent)||0;window.bookingDepositPercent=percent;window.bookingServicePrices=settings.service_prices||{};window.bookingServicePercents=settings.service_deposit_percents||{};window.bookingServicesById={};serviceInput.innerHTML='<option value="">Selecione um serviço</option>';(settings.services||[]).forEach(service=>{window.bookingServicesById[service.id]=service.name;const option=document.createElement('option');option.value=service.id;option.textContent=service.name;serviceInput.append(option)});updateSelectedPrice();
-        if(percent>0){notice.hidden=false;notice.textContent='O sinal pode variar conforme o serviço. Confira o percentual e o valor calculado após selecionar o procedimento. Envie o comprovante pelo WhatsApp; o horário só será confirmado pelo salão após a conferência.'}
+        if(percent>0||Object.values(window.bookingServicePercents).some(value=>Number(value)>0)){notice.hidden=false;notice.textContent='O sinal pode variar conforme o serviço. Confira o percentual e o valor calculado após selecionar o procedimento. Envie o comprovante pelo WhatsApp; o horário só será confirmado pelo salão após a conferência.'}
         else{notice.hidden=true;notice.textContent=''}
       }catch{notice.hidden=true}
     }
