@@ -116,7 +116,18 @@ async function openConfig(){
   (data.services||[]).forEach(service=>{
    const label=document.createElement('label');label.className='duration-item';
    const nameInput=document.createElement('input');nameInput.type='text';nameInput.maxLength=80;nameInput.value=service.name;nameInput.dataset.serviceName=service.id;nameInput.setAttribute('aria-label','Nome do serviço');
-   const description=document.createElement('textarea');description.rows=3;description.maxLength=500;description.placeholder='Descreva o que é realizado neste serviço';description.value=service.description||'';description.dataset.serviceDescription=service.id;description.setAttribute('aria-label','Descrição do serviço');
+   const existingDescriptions={
+    'mega hair':'Alongamento e volume para transformar o visual com mais comprimento e movimento.',
+    'hidratação':'Tratamento que ajuda a recuperar a maciez, o brilho e a aparência saudável dos fios.',
+    'progressivas':'Alinhamento dos fios para reduzir o volume e facilitar o cuidado diário.',
+    'corte':'Renove o visual com um corte pensado para valorizar seu estilo.',
+    'escova':'Modelagem dos fios com acabamento alinhado, movimento e brilho.',
+    'luzes':'Iluminação dos cabelos com mechas para criar profundidade e realçar o visual.',
+    'relaxamento':'Procedimento para suavizar a curvatura dos fios e ajudar no controle do volume.'
+   };
+   const descriptionText=document.createElement('small');descriptionText.style.cssText='display:block;color:#c4b8a6;line-height:1.55;margin:4px 0 10px';
+   const descriptionKey=String(service.name||'').trim().toLocaleLowerCase('pt-BR');
+   descriptionText.textContent=service.description||existingDescriptions[descriptionKey]||'Descrição não cadastrada.';
    const input=document.createElement('input');input.type='number';input.min='0';input.max='100000';input.step='0.01';input.inputMode='decimal';input.dataset.priceService=service.id;
    input.value=String(Number(data.settings.service_prices?.[service.id]??defaults[service.name]??0));
    const percentLabel=document.createElement('span');percentLabel.textContent='Sinal deste serviço (%) • vazio usa o padrão';
@@ -124,7 +135,7 @@ async function openConfig(){
    const activeLabel=document.createElement('span');activeLabel.textContent='Disponível para agendamento';
    const active=document.createElement('input');active.type='checkbox';active.checked=!!service.is_active;active.dataset.serviceActive=service.id;active.style.width='auto';
    const duration=document.createElement('small');duration.textContent='Duração: '+(Number(service.duration_minutes)||60)+' min';
-   label.append(nameInput,description,input,percentLabel,percent,activeLabel,active,duration);prices.append(label);input.addEventListener('input',updatePricePreviews);percent.addEventListener('input',updatePricePreviews);
+   label.append(nameInput,descriptionText,input,percentLabel,percent,activeLabel,active,duration);prices.append(label);input.addEventListener('input',updatePricePreviews);percent.addEventListener('input',updatePricePreviews);
   });
   updatePricePreviews();
   const durations=$('durationEditor');durations.innerHTML='';$('durationUnit').value='hours';
@@ -173,7 +184,7 @@ $('saveConfig').addEventListener('click',async()=>{
  const durations={};const unit=$('durationUnit').value;document.querySelectorAll('[data-service]').forEach(input=>{const value=input.value===''?null:Number(input.value);durations[input.dataset.service]=value===null?null:Math.round(unit==='hours'?value*60:value)});
  const servicePrices={};document.querySelectorAll('[data-price-service]').forEach(input=>{servicePrices[input.dataset.priceService]=Number(input.value)});
  const serviceDepositPercents={};document.querySelectorAll('[data-deposit-service]').forEach(input=>{if(input.value!=='')serviceDepositPercents[input.dataset.depositService]=Number(input.value)});
- const serviceChanges=[...document.querySelectorAll('[data-service-name]')].map(input=>{const id=input.dataset.serviceName,active=document.querySelector('[data-service-active="'+id+'"]'),description=document.querySelector('[data-service-description="'+id+'"]');return api('/admin/services/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify({name:input.value,description:description?.value||'',is_active:!!active?.checked})})});
+ const serviceChanges=[...document.querySelectorAll('[data-service-name]')].map(input=>{const id=input.dataset.serviceName,active=document.querySelector('[data-service-active="'+id+'"]');return api('/admin/services/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify({name:input.value,is_active:!!active?.checked})})});
  const slotInterval=Number($('slotInterval').value);if(!Number.isInteger(slotInterval)||slotInterval<1||slotInterval>720){$('configMessage').textContent='Digite um intervalo entre 1 e 720 minutos.';return;}
  $('saveConfig').disabled=true;$('configMessage').textContent='Salvando...';
  try{await Promise.all(serviceChanges);await api('/admin/config',{method:'PUT',body:JSON.stringify({weekly_hours:weekly,durations,service_prices:servicePrices,service_deposit_percents:serviceDepositPercents,slot_interval_minutes:slotInterval,deposit_percent:Number($('depositPercent').value)})});$('configMessage').textContent='Configuração salva. Preços e percentual de sinal atualizados para os próximos clientes.'}catch(err){$('configMessage').textContent=err.message}finally{$('saveConfig').disabled=false}
