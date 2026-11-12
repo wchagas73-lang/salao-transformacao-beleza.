@@ -62,7 +62,7 @@ $('saveConfig').addEventListener('click',async()=>{
  const weekly={};document.querySelectorAll('.day-row').forEach(row=>{const inputs=row.querySelectorAll('input');weekly[row.dataset.day]=inputs[0].checked?{open:inputs[1].value,close:inputs[2].value}:null});
  const durations={};document.querySelectorAll('[data-service]').forEach(input=>{durations[input.dataset.service]=input.value?Number(input.value):null});
  $('saveConfig').disabled=true;$('configMessage').textContent='Salvando...';
- try{await api('/admin/config',{method:'PUT',body:JSON.stringify({weekly_hours:weekly,durations,slot_interval_minutes:Number($('slotInterval').value)})});$('configMessage').textContent='Configuração salva. Os próximos pedidos serão validados conforme esses horários.'}catch(err){$('configMessage').textContent=err.message}finally{$('saveConfig').disabled=false}
+ try{await api('/admin/config',{method:'PUT',body:JSON.stringify({weekly_hours:weekly,durations,slot_interval_minutes:Number($('slotInterval').value)})});$('configMessage').textContent='Configuração salva. Serviços com duração cadastrada terão horários validados; os demais continuarão como solicitações manuais.'}catch(err){$('configMessage').textContent=err.message}finally{$('saveConfig').disabled=false}
 });
 $('logout').addEventListener('click',async()=>{try{await api('/admin/logout',{method:'POST'})}finally{$('dashboard').classList.add('hidden');$('login').classList.remove('hidden');$('password').value=''}});
 </script></body></html>
