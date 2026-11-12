@@ -91,6 +91,11 @@ export async function onRequest({request, env}) {
     if (candidate.getUTCFullYear()!==year || candidate.getUTCMonth()!==month-1 || candidate.getUTCDate()!==day || hour>23 || minute>59) return json({error:"Data ou horário inválido."},400);
     const startsAt = date+"T"+time+":00-03:00";
     if (Date.parse(startsAt) <= Date.now()) return json({error:"Escolha uma data e horário futuros."},400);
+    const requestIpHash=await hashValue(request.headers.get("CF-Connecting-IP")||"unknown");
+    const recentRequests=await env.DB.prepare("SELECT COUNT(*) AS total FROM booking_request_attempts WHERE ip_hash=? AND attempted_at >= datetime('now','-1 hour')").bind(requestIpHash).first();
+    if((recentRequests?.total||0)>=10) return json({error:"Muitas solicitações em pouco tempo. Tente novamente mais tarde."},429);
+    await env.DB.prepare("INSERT INTO booking_request_attempts(ip_hash) VALUES(?)").bind(requestIpHash).run();
+    await env.DB.prepare("DELETE FROM booking_request_attempts WHERE attempted_at < datetime('now','-1 day')").run();
     const id = crypto.randomUUID();
     const serviceRow=await env.DB.prepare("SELECT duration_minutes,is_active FROM services WHERE id=?").bind(service).first();
     if(!serviceRow || !serviceRow.is_active) return json({error:"Este serviço não está disponível no momento."},400);
