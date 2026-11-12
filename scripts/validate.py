@@ -34,7 +34,7 @@ service_count = db.execute("SELECT COUNT(*) FROM services").fetchone()[0]
 if service_count != 7:
     raise SystemExit(f"Esperados 7 serviços iniciais, encontrados {service_count}")
 tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-required = {"services", "appointments", "blocked_periods", "salon_settings", "admin_login_attempts"}
+required = {"services", "appointments", "blocked_periods", "salon_settings", "admin_login_attempts", "booking_request_attempts"}
 if not required.issubset(tables):
     raise SystemExit(f"Tabelas ausentes: {sorted(required - tables)}")
 print("OK SQL: schema executado e tabelas/serviços verificados")
