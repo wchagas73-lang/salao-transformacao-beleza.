@@ -88,7 +88,7 @@
 <body>
   <header class="top"><div class="wrap nav">
     <a class="brand" href="#">Transformação <span>e Beleza Hair</span></a>
-    <nav class="links"><a href="#servicos">Serviços</a><a href="#sobre">Sobre</a><a href="#agendar">Agendar</a><a href="/admin">Painel Administrativo</a></nav>
+    <nav class="links"><a href="#serviceCatalog">Serviços</a><a href="#sobre">Sobre</a><a href="#agendar">Agendar</a><a href="/admin">Painel Administrativo</a></nav>
   </div></header>
   <main>
     <div class="wrap hero">
@@ -99,18 +99,6 @@
       </div>
       <div class="hero-art"><div class="art-caption"><strong>Mega Hair</strong><small>SUA BELEZA, SUA IDENTIDADE</small></div></div>
     </div>
-    <section id="servicos"><div class="wrap">
-      <div class="section-head"><div class="eyebrow">Nossos cuidados</div><h2>Serviços</h2><p>Escolha o cuidado que combina com você. Os detalhes de valores e duração serão confirmados diretamente com o salão.</p></div>
-      <div class="services">
-        <article class="service featured"><small>ESPECIALIDADE</small><h3>Mega Hair</h3><p>Transformação e valorização dos cabelos com atendimento personalizado.</p></article>
-        <article class="service"><small>CUIDADO</small><h3>Hidratação</h3><p>Tratamento para cuidar da saúde e aparência dos fios.</p></article>
-        <article class="service"><small>BELEZA</small><h3>Progressivas</h3><p>Atendimento de acordo com a necessidade de cada cabelo.</p></article>
-        <article class="service"><small>ESTILO</small><h3>Corte</h3><p>Renove o visual com um corte pensado para você.</p></article>
-        <article class="service"><small>FINALIZAÇÃO</small><h3>Escova</h3><p>Acabamento e finalização para diferentes ocasiões.</p></article>
-        <article class="service"><small>COLORAÇÃO</small><h3>Luzes</h3><p>Iluminação dos fios com avaliação personalizada.</p></article>
-        <article class="service"><small>TRATAMENTO</small><h3>Relaxamento</h3><p>Procedimento realizado após avaliação dos cabelos.</p></article>
-      </div>
-    </div></section>
     <section id="sobre" class="about"><div class="wrap" style="display:grid;grid-template-columns:.8fr 1.2fr;gap:55px;align-items:center">
       <div class="about-mark"><b>Cátia Souza</b><span>TRANSFORMAÇÃO E BELEZA HAIR</span></div>
       <div><div class="eyebrow">Quem cuida de você</div><h2>Seu momento de se sentir ainda mais bonita.</h2><p>Cátia Souza recebe cada cliente com atenção e cuidado, buscando entender o resultado desejado e indicar o serviço mais adequado. Um atendimento próximo, pensado para valorizar sua beleza.</p><p><strong style="color:var(--gold)">Endereço:</strong> Av. 7 de Setembro, 865, Condomínio Edifício Solar Paraíbuna (Galeria), Juiz de Fora/MG.</p></div>
@@ -119,7 +107,8 @@
       <div class="booking-info"><div class="eyebrow">Vamos conversar?</div><h2>Solicite seu horário.</h2><p>Preencha seus dados e envie sua solicitação pelo WhatsApp. O salão confirmará a disponibilidade do horário com você.</p><p><strong style="color:var(--gold)">WhatsApp:</strong> (32) 98888-9108</p></div>
       <div id="serviceCatalog" class="service-catalog" aria-label="Catálogo de serviços" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:24px 0"></div>
       <form class="form" id="bookingForm"><div class="form-grid">
-        <div class="field full"><label for="service">Serviço desejado</label><select id="service" required><option value="">Carregando serviços...</option></select></div>
+        <input id="service" type="hidden" required>
+        <div class="field full"><label>Serviços escolhidos</label><div id="selectedServices" style="background:#100e0d;border:1px solid #59482f;border-radius:10px;padding:12px;color:#f5eee3"><p id="selectedServicesEmpty" style="margin:0;color:#b8aca0;font:12px/1.5 Arial,sans-serif">Escolha um ou mais serviços no catálogo acima.</p><div id="selectedServicesList"></div><button id="addAnotherService" type="button" class="btn secondary" style="margin-top:10px;padding:9px 14px;min-height:38px">+ Adicionar outro serviço</button></div></div>
         <div class="field"><label for="date">Data desejada</label><input id="date" type="date" required></div>
         <div class="field"><label for="time">Horário desejado</label><input id="time" type="time" list="availableSlots" required><datalist id="availableSlots"></datalist><small id="availabilityHint" style="color:var(--muted);font:11px/1.5 Arial,sans-serif">O salão confirmará a disponibilidade do horário solicitado.</small></div>
         <div class="field"><label for="name">Seu nome</label><input id="name" type="text" placeholder="Nome completo" required></div>
@@ -137,13 +126,16 @@
     window.bookingServicesById={};
     const money=value=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(value)||0);
     function updateSelectedPrice(){
-      const service=serviceInput.value, price=Number(window.bookingServicePrices[service]||0), percent=Number(window.bookingServicePercents[service]??window.bookingDepositPercent)||0;
       const box=document.getElementById('priceNotice');
-      if(!service||!price){box.hidden=true;box.textContent='';return}
-      const signal=Math.round(price*percent)/100, remaining=price-signal;
-      box.hidden=false;
-      box.textContent='Valor demonstrativo do serviço: '+money(price)+'. '+(percent>0?'Sinal de '+percent+'%: '+money(signal)+'. Restante após o sinal: '+money(remaining)+'. ':'')+'Preço ilustrativo, sujeito à confirmação pelo salão.';
-}
+      if(!selectedServiceIds.length){box.hidden=true;box.textContent='';return}
+      let total=0,totalSignal=0;
+      const lines=selectedServiceIds.map(id=>{
+        const amount=Number(window.bookingServicePrices[id])||0,percent=Number(window.bookingServicePercents[id]??window.bookingDepositPercent)||0,signal=Math.round(amount*percent)/100;
+        total+=amount;totalSignal+=signal;
+        return (window.bookingServicesById[id]||id)+': '+money(amount)+(percent>0?' | sinal '+percent+'%: '+money(signal):' | sem sinal');
+      });
+      box.hidden=false;box.textContent=lines.join(' • ')+' | Total: '+money(total)+(totalSignal>0?' | Sinais somados: '+money(totalSignal):'');
+    }
     async function loadDepositNotice(){
       const notice=document.getElementById('depositNotice');
       try{
@@ -183,9 +175,9 @@
           const p=Number(window.bookingServicePercents[service.id]??percent)||0,amount=Number(window.bookingServicePrices[service.id])||0;
           const price=document.createElement('span');price.textContent='Valor: '+money(amount);price.style.cssText='display:block;margin-top:9px;color:#d6b46a;font-size:14px;font-weight:600';
           const signal=document.createElement('span');signal.textContent=p>0?'SINAL '+p+'%  •  '+money(Math.round(amount*p)/100):'SEM SINAL';signal.style.cssText=p>0?'display:inline-flex;align-items:center;margin-top:8px;padding:6px 9px;border:1px solid #d6b46a;border-radius:20px;background:#d6b46a;color:#17120b;font:700 11px Arial,sans-serif;letter-spacing:.3px':'display:inline-flex;align-items:center;margin-top:8px;padding:6px 9px;border:1px solid #76664b;border-radius:20px;color:#d6b46a;font:600 10px Arial,sans-serif';
-          card.append(art,title,description,price,signal);card.addEventListener('click',()=>{serviceInput.value=service.id;serviceInput.dispatchEvent(new Event('change',{bubbles:true}));document.getElementById('bookingForm').scrollIntoView({behavior:'smooth',block:'start'})});catalog.append(card);
+          card.append(art,title,description,price,signal);card.dataset.serviceId=service.id;card.setAttribute('aria-pressed','false');card.addEventListener('click',()=>{if(selectedServiceIds.includes(service.id)){selectedServiceIds=selectedServiceIds.filter(x=>x!==service.id)}else if(selectedServiceIds.length<7){selectedServiceIds.push(service.id)}else{availabilityHint.textContent='Você pode selecionar até 7 serviços por solicitação.';return}renderSelectedServices();renderCatalogSelection();updateSelectedPrice();loadAvailableSlots();document.getElementById('bookingForm').scrollIntoView({behavior:'smooth',block:'start'})});catalog.append(card);
         });
-        updateSelectedPrice();
+        renderSelectedServices();renderCatalogSelection();updateSelectedPrice();
         if(percent>0||Object.values(window.bookingServicePercents).some(value=>Number(value)>0)){notice.hidden=false;notice.textContent='O sinal pode variar conforme o serviço. Confira o percentual e o valor calculado após selecionar o procedimento. Envie o comprovante pelo WhatsApp; o horário só será confirmado pelo salão após a conferência.'}
         else{notice.hidden=true;notice.textContent=''}
       }catch{notice.hidden=true}
@@ -193,65 +185,50 @@
     window.bookingDepositPromise=loadDepositNotice();
     const dateInput=document.getElementById('date');
     const today=new Date();dateInput.min=new Date(today.getTime()-today.getTimezoneOffset()*60000).toISOString().slice(0,10);
-    const serviceInput=document.getElementById('service'), timeInput=document.getElementById('time'), slotsList=document.getElementById('availableSlots'), availabilityHint=document.getElementById('availabilityHint');
+    const serviceInput=document.getElementById('service'),timeInput=document.getElementById('time'),slotsList=document.getElementById('availableSlots'),availabilityHint=document.getElementById('availabilityHint');
     let currentAvailability=null;
     function explainSelectedTime(){
       if(!currentAvailability||!dateInput.value||!timeInput.value)return;
       const selectedStart=Date.parse(dateInput.value+'T'+timeInput.value+':00-03:00');
       if(!Number.isFinite(selectedStart))return;
       const selectedEnd=selectedStart+(Number(currentAvailability.duration_minutes)||0)*60000;
-      const blocked=(currentAvailability.blocked_periods||[]).find(period=>{
-        const start=Date.parse(period.starts_at),end=Date.parse(period.ends_at);
-        return Number.isFinite(start)&&Number.isFinite(end)&&selectedStart<end&&selectedEnd>start;
-      });
-      if(blocked){
-        availabilityHint.textContent='Este horário está bloqueado'+(blocked.reason?': '+blocked.reason:'')+'. Escolha outro horário.';
-        return;
-      }
-      if(!(currentAvailability.slots||[]).includes(timeInput.value)){
-        availabilityHint.textContent='Este horário não está disponível na agenda. Escolha um dos horários sugeridos ou tente outra data.';
-        return;
-      }
+      const blocked=(currentAvailability.blocked_periods||[]).find(period=>{const start=Date.parse(period.starts_at),end=Date.parse(period.ends_at);return Number.isFinite(start)&&Number.isFinite(end)&&selectedStart<end&&selectedEnd>start});
+      if(blocked){availabilityHint.textContent='Este horário está bloqueado'+(blocked.reason?': '+blocked.reason:'')+'. Escolha outro horário.';return}
+      if(!(currentAvailability.slots||[]).includes(timeInput.value)){availabilityHint.textContent='Este horário não está disponível para a duração total dos serviços. Escolha outro horário.';return}
       availabilityHint.textContent='Horário disponível para solicitar. O agendamento ainda depende da confirmação do salão.';
     }
     async function loadAvailableSlots(){
       slotsList.innerHTML='';currentAvailability=null;
-      if(!serviceInput.value||!dateInput.value){availabilityHint.textContent='Escolha o serviço e a data para consultar os horários.';return}
-      availabilityHint.textContent='Consultando horários...';
+      if(!selectedServiceIds.length||!dateInput.value){availabilityHint.textContent='Escolha um ou mais serviços e a data para consultar os horários.';return}
+      availabilityHint.textContent='Consultando horários para a duração total dos serviços...';
       try{
-        const response=await fetch('/api/availability?service='+encodeURIComponent(serviceInput.value)+'&date='+encodeURIComponent(dateInput.value));
-        const data=await response.json();
-        if(!response.ok) throw new Error(data.error||'Não foi possível consultar a agenda.');
-        if(!data.configured){availabilityHint.textContent='A agenda ainda está sendo configurada. Você pode solicitar um horário, sujeito à confirmação do salão.';return}
-        currentAvailability=data;
-        (data.slots||[]).forEach(slot=>{const option=document.createElement('option');option.value=slot;slotsList.append(option)});
-        availabilityHint.textContent=data.slots?.length?'Horários sugeridos conforme a agenda do salão. O pedido ainda depende de confirmação.':'Não há horários livres nessa data. Tente outra data.';
+        const response=await fetch('/api/availability?services='+encodeURIComponent(selectedServiceIds.join(','))+'&date='+encodeURIComponent(dateInput.value));
+        const data=await response.json();if(!response.ok)throw new Error(data.error||'Não foi possível consultar a agenda.');
+        if(!data.configured){availabilityHint.textContent='A agenda ainda está sendo configurada. O salão confirmará o horário solicitado.';return}
+        currentAvailability=data;(data.slots||[]).forEach(slot=>{const option=document.createElement('option');option.value=slot;slotsList.append(option)});
+        availabilityHint.textContent=data.slots?.length?'Horários sugeridos conforme a duração total dos serviços. O pedido ainda depende de confirmação.':'Não há horários livres para a duração total dos serviços nessa data. Tente outra data.';
         explainSelectedTime();
-      }catch(err){availabilityHint.textContent='Não foi possível consultar a agenda agora. O salão confirmará manualmente.'}
+      }catch(err){availabilityHint.textContent=err.message||'Não foi possível consultar a agenda agora.'}
     }
-    serviceInput.addEventListener('change',()=>{loadAvailableSlots();updateSelectedPrice()});dateInput.addEventListener('change',loadAvailableSlots);
-    timeInput.addEventListener('change',explainSelectedTime);
+    document.getElementById('addAnotherService').addEventListener('click',()=>document.getElementById('serviceCatalog').scrollIntoView({behavior:'smooth',block:'start'}));
+    dateInput.addEventListener('change',loadAvailableSlots);timeInput.addEventListener('change',explainSelectedTime);
     document.getElementById('bookingForm').addEventListener('submit',async function(e){
-      e.preventDefault();
-      await window.bookingDepositPromise;
+      e.preventDefault();await window.bookingDepositPromise;
+      if(!selectedServiceIds.length){availabilityHint.textContent='Selecione pelo menos um serviço antes de continuar.';return}
       const v=id=>document.getElementById(id).value.trim();
-      const payload={name:v('name'),phone:v('phone'),service:v('service'),date:v('date'),time:v('time'),notes:v('details')};
-      const button=this.querySelector('button[type="submit"]');
-      button.disabled=true; button.textContent='Enviando solicitação...';
-      try {
+      const payload={name:v('name'),phone:v('phone'),services:[...selectedServiceIds],service:selectedServiceIds[0],date:v('date'),time:v('time'),notes:v('details')};
+      const button=this.querySelector('button[type="submit"]');button.disabled=true;button.textContent='Enviando solicitação...';
+      try{
         const response=await fetch('/api/request',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
-        const result=await response.json();
-        if(!response.ok) throw new Error(result.error||'Não foi possível registrar a solicitação.');
-        const msg=['Olá, Cátia! Registrei uma solicitação de agendamento pelo site.','Nome: '+payload.name,'Telefone: '+payload.phone,'Serviço: '+(window.bookingServicesById[payload.service]||payload.service),'Data desejada: '+payload.date,'Horário desejado: '+payload.time,'Observações: '+(payload.notes||'Não informado'),'Código da solicitação: '+result.id,'','Pode confirmar se há disponibilidade?','Valor demonstrativo do serviço: '+new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(window.bookingServicePrices[payload.service])||0),...((Number(window.bookingServicePercents[payload.service]??window.bookingDepositPercent)||0)>0?['Sinal de '+(Number(window.bookingServicePercents[payload.service]??window.bookingDepositPercent)||0)+'%: '+new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Math.round((Number(window.bookingServicePrices[payload.service])||0)*(Number(window.bookingServicePercents[payload.service]??window.bookingDepositPercent)||0))/100),'Restante: '+new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format((Number(window.bookingServicePrices[payload.service])||0)-Math.round((Number(window.bookingServicePrices[payload.service])||0)*(Number(window.bookingServicePercents[payload.service]??window.bookingDepositPercent)||0))/100),'Após realizar o pagamento do sinal, vou enviar o comprovante nesta conversa.']:[]) ].join('\n');
+        const result=await response.json();if(!response.ok)throw new Error(result.error||'Não foi possível registrar a solicitação.');
+        const moneyText=value=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(value);
+        const total=payload.services.reduce((sum,id)=>sum+(Number(window.bookingServicePrices[id])||0),0);
+        const totalSignal=payload.services.reduce((sum,id)=>{const amount=Number(window.bookingServicePrices[id])||0,percent=Number(window.bookingServicePercents[id]??window.bookingDepositPercent)||0;return sum+Math.round(amount*percent)/100},0);
+        const serviceLines=payload.services.map(id=>{const amount=Number(window.bookingServicePrices[id])||0,percent=Number(window.bookingServicePercents[id]??window.bookingDepositPercent)||0,signal=Math.round(amount*percent)/100;return (window.bookingServicesById[id]||id)+' | Valor: '+moneyText(amount)+(percent>0?' | Sinal '+percent+'%: '+moneyText(signal):' | Sem sinal')});
+        const msg=['Olá, Cátia! Registrei uma solicitação de agendamento pelo site.','Nome: '+payload.name,'Telefone: '+payload.phone,'Serviços escolhidos:',...serviceLines,'Valor total: '+moneyText(total),'Sinais somados: '+moneyText(totalSignal),'Data desejada: '+payload.date,'Horário desejado: '+payload.time,'Observações: '+(payload.notes||'Não informado'),'Código da solicitação: '+result.id,'','Pode confirmar se há disponibilidade?'].join('\\n');
         window.location.href='https://wa.me/5532999953215?text='+encodeURIComponent(msg);
-      } catch(err) {
-        availabilityHint.textContent=err.message||'Não foi possível registrar a solicitação. Tente outro horário.';
-        availabilityHint.scrollIntoView({behavior:'smooth',block:'center'});
-        await loadAvailableSlots();
-        if(timeInput.value) explainSelectedTime();
-      } finally {
-        button.disabled=false; button.textContent='Enviar solicitação pelo WhatsApp';
-      }
+      }catch(err){availabilityHint.textContent=err.message||'Não foi possível registrar a solicitação. Tente outro horário.';availabilityHint.scrollIntoView({behavior:'smooth',block:'center'});await loadAvailableSlots();if(timeInput.value)explainSelectedTime()}
+      finally{button.disabled=false;button.textContent='Enviar solicitação pelo WhatsApp'}
     });
   </script>
 </body>
