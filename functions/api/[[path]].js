@@ -142,6 +142,26 @@ export async function onRequest({request, env}) {
   if (path.startsWith("/admin")) {
     if (!(await requireAdmin(request,env))) return json({error:"Acesso não autorizado."},401);
     if (path === "/admin/logout" && request.method === "POST") return json({ok:true},200,{"set-cookie":COOKIE+"=; HttpOnly; Secure; SameSite=Strict; Path=/api/admin; Max-Age=0"});
+    if (path === "/admin/blocks" && request.method === "GET") {
+      const result=await env.DB.prepare("SELECT id,starts_at,ends_at,reason,created_at FROM blocked_periods ORDER BY starts_at LIMIT 200").all();
+      return json({blocks:result.results||[]});
+    }
+    if (path === "/admin/blocks" && request.method === "POST") {
+      let body; try { body=await request.json(); } catch { return json({error:"Dados inválidos."},400); }
+      if(!body||typeof body!=="object") return json({error:"Dados inválidos."},400);
+      const start=cleanText(body.starts_at,25), end=cleanText(body.ends_at,25), reason=cleanText(body.reason,160);
+      const startMs=Date.parse(start), endMs=Date.parse(end);
+      if(!Number.isFinite(startMs)||!Number.isFinite(endMs)||endMs<=startMs) return json({error:"Informe início e fim válidos. O fim deve ser posterior ao início."},400);
+      const id=crypto.randomUUID();
+      await env.DB.prepare("INSERT INTO blocked_periods(id,starts_at,ends_at,reason) VALUES(?,?,?,?)").bind(id,start,end,reason).run();
+      return json({ok:true,id},201);
+    }
+    if(path.startsWith("/admin/blocks/") && request.method==="DELETE"){
+      const id=path.split("/").pop();
+      const result=await env.DB.prepare("DELETE FROM blocked_periods WHERE id=?").bind(id).run();
+      if(!result.meta?.changes) return json({error:"Bloqueio não encontrado."},404);
+      return json({ok:true});
+    }
     if (path === "/admin/config" && request.method === "GET") {
       const [services,settings]=await Promise.all([
         env.DB.prepare("SELECT id,name,duration_minutes,is_active FROM services ORDER BY display_order").all(),
