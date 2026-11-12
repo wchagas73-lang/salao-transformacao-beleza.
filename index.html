@@ -155,7 +155,7 @@
         (settings.services||[]).forEach(service=>{
           window.bookingServicesById[service.id]=service.name;
           const option=document.createElement('option');option.value=service.id;option.textContent=service.name;serviceInput.append(option);
-          const card=document.createElement('button');card.type='button';card.style.cssText='text-align:left;background:#191614;border:1px solid #59482f;border-radius:14px;padding:10px;color:#f5eee3;cursor:pointer';
+          const card=document.createElement('button');card.type='button';card.style.cssText='text-align:left;background:#191614;border:1px solid #59482f;border-radius:14px;padding:12px;color:#f5eee3;cursor:pointer;display:flex;flex-direction:column;align-items:stretch;min-height:100%';
           const art=document.createElement('div');art.className='service-art';art.setAttribute('aria-hidden','true');
           const illustrations={
             'mega hair':"<svg viewBox=\"0 0 200 150\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M43 116C20 82 30 30 69 22c28-6 51 13 47 41-2 16-15 28-29 34M48 48C40 81 53 117 81 132c28 15 55 3 77-13 14-10 25-14 35-10M61 39C51 73 67 109 94 121c23 10 45-2 65-17 13-9 24-12 34-9M76 33c-7 29 9 60 32 70 20 9 38-4 55-17 11-8 21-10 31-7M91 34c-3 23 10 44 27 51\"/></svg>",
@@ -169,11 +169,21 @@
           const symbol=document.createElement('span');symbol.className='service-art-symbol';
           const key=service.name.toLocaleLowerCase('pt-BR');symbol.innerHTML=illustrations[key]||'<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M22 80c10-25 10-43 28-60 18 17 18 35 28 60M31 69c13-11 25-11 38 0"/></svg>';
           art.append(symbol);
-          const title=document.createElement('strong');title.textContent=service.name;title.style.cssText='display:block;margin-top:9px;font-size:14px';
-          const price=document.createElement('span');price.textContent=money(window.bookingServicePrices[service.id]);price.style.cssText='display:block;margin-top:5px;color:#d6b46a;font-size:13px';
+          const title=document.createElement('strong');title.textContent=service.name;title.style.cssText='display:block;margin-top:10px;font-size:16px;color:#f5eee3';
+          const descriptions={
+            'mega hair':'Alongamento e volume para transformar o visual com mais comprimento e movimento.',
+            'hidratação':'Tratamento que ajuda a recuperar a maciez, o brilho e a aparência saudável dos fios.',
+            'progressivas':'Alinhamento dos fios para reduzir o volume e facilitar o cuidado diário.',
+            'corte':'Renove o visual com um corte pensado para valorizar seu estilo.',
+            'escova':'Modelagem dos fios com acabamento alinhado, movimento e brilho.',
+            'luzes':'Iluminação dos cabelos com mechas para criar profundidade e realçar o visual.',
+            'relaxamento':'Procedimento para suavizar a curvatura dos fios e ajudar no controle do volume.'
+          };
+          const description=document.createElement('span');description.textContent=descriptions[key]||'Conheça este serviço e consulte os detalhes com o salão.';description.style.cssText='display:block;margin-top:5px;color:#c6bba9;font:12px/1.45 Arial,sans-serif';
           const p=Number(window.bookingServicePercents[service.id]??percent)||0,amount=Number(window.bookingServicePrices[service.id])||0;
-          const signal=document.createElement('small');signal.textContent=p>0?'Sinal '+p+'%: '+money(Math.round(amount*p)/100):'Sinal não exigido';signal.style.cssText='display:block;margin-top:4px;color:#c6bba9;font-size:11px';
-          card.append(art,title,price,signal);card.addEventListener('click',()=>{serviceInput.value=service.id;serviceInput.dispatchEvent(new Event('change',{bubbles:true}));document.getElementById('bookingForm').scrollIntoView({behavior:'smooth',block:'start'})});catalog.append(card);
+          const price=document.createElement('span');price.textContent='Valor: '+money(amount);price.style.cssText='display:block;margin-top:9px;color:#d6b46a;font-size:14px;font-weight:600';
+          const signal=document.createElement('span');signal.textContent=p>0?'SINAL '+p+'%  •  '+money(Math.round(amount*p)/100):'SEM SINAL';signal.style.cssText=p>0?'display:inline-flex;align-items:center;margin-top:8px;padding:6px 9px;border:1px solid #d6b46a;border-radius:20px;background:#d6b46a;color:#17120b;font:700 11px Arial,sans-serif;letter-spacing:.3px':'display:inline-flex;align-items:center;margin-top:8px;padding:6px 9px;border:1px solid #76664b;border-radius:20px;color:#d6b46a;font:600 10px Arial,sans-serif';
+          card.append(art,title,description,price,signal);card.addEventListener('click',()=>{serviceInput.value=service.id;serviceInput.dispatchEvent(new Event('change',{bubbles:true}));document.getElementById('bookingForm').scrollIntoView({behavior:'smooth',block:'start'})});catalog.append(card);
         });
         updateSelectedPrice();
         if(percent>0||Object.values(window.bookingServicePercents).some(value=>Number(value)>0)){notice.hidden=false;notice.textContent='O sinal pode variar conforme o serviço. Confira o percentual e o valor calculado após selecionar o procedimento. Envie o comprovante pelo WhatsApp; o horário só será confirmado pelo salão após a conferência.'}
