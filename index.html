@@ -89,12 +89,25 @@
         <div class="field"><label for="name">Seu nome</label><input id="name" type="text" placeholder="Nome completo" required></div>
         <div class="field"><label for="phone">Seu telefone</label><input id="phone" type="tel" placeholder="(00) 00000-0000" required></div>
         <div class="field full"><label for="details">Observações (opcional)</label><textarea id="details" rows="3" placeholder="Conte um pouco sobre o que deseja..."></textarea></div>
-      </div><p class="notice">Seus dados serão usados para responder à solicitação de agendamento. Consulte nossa <a href="privacidade.html" style="color:var(--gold)">política de privacidade</a>. O envio não confirma a reserva. O salão verificará e confirmará o horário.</p><button class="btn" type="submit">Enviar solicitação pelo WhatsApp</button></form>
+      </div><p id="depositNotice" class="notice" hidden></p><p class="notice">Seus dados serão usados para responder à solicitação de agendamento. Consulte nossa <a href="privacidade.html" style="color:var(--gold)">política de privacidade</a>. O envio não confirma a reserva. O salão verificará e confirmará o horário.</p><button class="btn" type="submit">Enviar solicitação pelo WhatsApp</button></form>
     </div></section>
   </main>
   <footer><div class="wrap foot"><span>© <span id="year"></span> Transformação e Beleza Hair • Cátia Souza</span><span><a href="privacidade.html">Privacidade</a> · <a href="admin.html">Área da proprietária</a> · Juiz de Fora/MG</span></div></footer>
   <script>
     document.getElementById('year').textContent=new Date().getFullYear();
+    window.bookingDepositPercent=0;
+    async function loadDepositNotice(){
+      const notice=document.getElementById('depositNotice');
+      try{
+        const response=await fetch('/api/booking-settings',{cache:'no-store'});
+        if(!response.ok)return;
+        const settings=await response.json();
+        const percent=Number(settings.deposit_percent)||0;window.bookingDepositPercent=percent;
+        if(percent>0){notice.hidden=false;notice.textContent='Para confirmar o agendamento, é necessário pagar um sinal de '+percent+'% do valor do serviço. Após a solicitação, envie o comprovante pelo WhatsApp. O horário só será confirmado pelo salão após a conferência.'}
+        else{notice.hidden=true;notice.textContent=''}
+      }catch{notice.hidden=true}
+    }
+    loadDepositNotice();
     const dateInput=document.getElementById('date');
     const today=new Date();dateInput.min=new Date(today.getTime()-today.getTimezoneOffset()*60000).toISOString().slice(0,10);
     const serviceInput=document.getElementById('service'), timeInput=document.getElementById('time'), slotsList=document.getElementById('availableSlots'), availabilityHint=document.getElementById('availabilityHint');
@@ -145,7 +158,7 @@
         const response=await fetch('/api/request',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
         const result=await response.json();
         if(!response.ok) throw new Error(result.error||'Não foi possível registrar a solicitação.');
-        const msg=['Olá, Cátia! Registrei uma solicitação de agendamento pelo site.','Nome: '+payload.name,'Telefone: '+payload.phone,'Serviço: '+payload.service,'Data desejada: '+payload.date,'Horário desejado: '+payload.time,'Observações: '+(payload.notes||'Não informado'),'Código da solicitação: '+result.id,'','Pode confirmar se há disponibilidade?'].join('\n');
+        const msg=['Olá, Cátia! Registrei uma solicitação de agendamento pelo site.','Nome: '+payload.name,'Telefone: '+payload.phone,'Serviço: '+payload.service,'Data desejada: '+payload.date,'Horário desejado: '+payload.time,'Observações: '+(payload.notes||'Não informado'),'Código da solicitação: '+result.id,'','Pode confirmar se há disponibilidade?',...(window.bookingDepositPercent>0?['Sinal informado no site: '+window.bookingDepositPercent+'%','Após realizar o pagamento, vou enviar o comprovante nesta conversa.']:[]) ].join('\n');
         window.location.href='https://wa.me/5532999953215?text='+encodeURIComponent(msg);
       } catch(err) {
         availabilityHint.textContent=err.message||'Não foi possível registrar a solicitação. Tente outro horário.';
