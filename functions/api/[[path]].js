@@ -69,7 +69,10 @@ export async function onRequest({request, env}) {
     const open=toMin(hours.open), close=toMin(hours.close);
     const intervalRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='slot_interval_minutes'").first();
     const interval=Math.min(120,Math.max(15,Number(intervalRow?.setting_value)||30));
-    const busy=await env.DB.prepare("SELECT starts_at,ends_at FROM appointments WHERE status IN ('requested','confirmed') AND substr(starts_at,1,10)=? UNION ALL SELECT starts_at,ends_at FROM blocked_periods WHERE substr(starts_at,1,10)=?").bind(date,date).all();
+    const dayStart=date+"T00:00:00-03:00";
+    const nextDay=new Date(Date.UTC(year,month-1,day+1)).toISOString().slice(0,10);
+    const dayEnd=nextDay+"T00:00:00-03:00";
+    const busy=await env.DB.prepare("SELECT starts_at,ends_at FROM appointments WHERE status IN ('requested','confirmed') AND starts_at < ? AND (ends_at > ? OR (ends_at IS NULL AND starts_at >= ?)) UNION ALL SELECT starts_at,ends_at FROM blocked_periods WHERE starts_at < ? AND ends_at > ?").bind(dayEnd,dayStart,dayStart,dayEnd,dayStart).all();
     const busyRanges=(busy.results||[]).map(x=>{const start=Date.parse(x.starts_at),end=x.ends_at?Date.parse(x.ends_at):start+1;return [start,end]}).filter(x=>Number.isFinite(x[0])&&Number.isFinite(x[1]));
     const slots=[];
     for(let m=open;m+serviceRow.duration_minutes<=close;m+=interval){
