@@ -39,3 +39,7 @@ Após a implantação e configuração do D1 e dos segredos, o painel ficará em
 ## Importante antes de uso real
 
 O formulário público só registra solicitações como pendentes. Ele não garante vaga, não calcula duração e não bloqueia horários. A proprietária deve confirmar cada solicitação. A implementação de disponibilidade automática exige definir expediente, duração e intervalos de cada serviço.
+
+## Configuração da agenda
+
+No painel administrativo, a proprietária pode definir dias e horários de atendimento, duração de cada serviço e intervalo entre opções. Quando o serviço e o expediente estiverem configurados, o site consulta horários sugeridos e a API valida conflitos antes de registrar a solicitação. Toda solicitação continua pendente até confirmação manual.
