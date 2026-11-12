@@ -1,6 +1,6 @@
 const COOKIE = "salon_admin";
 const SESSION_SECONDS = 60 * 60 * 24 * 30;
-const DEFAULT_SERVICE_PRICES = {"Mega Hair":300,"Hidratação":100,"Progressivas":220,"Corte":70,"Escova":60,"Luzes":350,"Relaxamento":150};
+const DEFAULT_SERVICE_PRICES = {"Mega Hair":500,"Hidratação":90,"Progressivas":350,"Corte":80,"Escova":70,"Luzes":350,"Relaxamento":180};
 
 function json(data, status = 200, headers = {}) {
   return new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...headers } });
