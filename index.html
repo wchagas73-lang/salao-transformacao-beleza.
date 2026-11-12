@@ -136,6 +136,29 @@
       });
       box.hidden=false;box.textContent=lines.join(' • ')+' | Total: '+money(total)+(totalSignal>0?' | Sinais somados: '+money(totalSignal):'');
     }
+    let selectedServiceIds=[];
+    function renderSelectedServices(){
+      const list=document.getElementById("selectedServicesList"),empty=document.getElementById("selectedServicesEmpty");
+      if(!list||!empty)return;
+      list.innerHTML="";empty.hidden=selectedServiceIds.length>0;
+      serviceInput.value=selectedServiceIds[0]||"";
+      selectedServiceIds.forEach(id=>{
+        const row=document.createElement("div");row.style.cssText="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #40352c";
+        const label=document.createElement("span");label.textContent=window.bookingServicesById[id]||id;label.style.cssText="font:13px Arial,sans-serif;color:#f5eee3";
+        const remove=document.createElement("button");remove.type="button";remove.textContent="Remover";remove.style.cssText="border:1px solid #76664b;border-radius:20px;background:transparent;color:#d6b46a;padding:5px 10px;font:11px Arial,sans-serif";
+        remove.addEventListener("click",()=>{selectedServiceIds=selectedServiceIds.filter(x=>x!==id);renderSelectedServices();renderCatalogSelection();updateSelectedPrice();loadAvailableSlots()});
+        row.append(label,remove);list.append(row);
+      });
+      const add=document.getElementById("addAnotherService");if(add)add.hidden=selectedServiceIds.length===0;
+    }
+    function renderCatalogSelection(){
+      document.querySelectorAll("#serviceCatalog button[data-service-id]").forEach(card=>{
+        const chosen=selectedServiceIds.includes(card.dataset.serviceId);
+        card.style.borderColor=chosen?"#d6b46a":"#59482f";
+        card.style.background=chosen?"linear-gradient(145deg,#302416,#191614)":"#191614";
+        card.setAttribute("aria-pressed",chosen?"true":"false");
+      });
+    }
     async function loadDepositNotice(){
       const notice=document.getElementById('depositNotice');
       try{
