@@ -1,5 +1,5 @@
 -- Arcany Digital | Transformação e Beleza Hair
--- Cloudflare D1 schema (preparação). Ainda não conectado ao formulário público.
+-- Cloudflare D1 schema para solicitações, serviços, agenda e controle de acesso.
 -- Armazene horários no fuso local do salão (America/Sao_Paulo) em ISO 8601 com offset.
 PRAGMA foreign_keys = ON;
 
