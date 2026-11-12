@@ -182,7 +182,7 @@
         const result=await response.json();
         if(!response.ok) throw new Error(result.error||'Não foi possível registrar a solicitação.');
         const msg=['Olá, Cátia! Registrei uma solicitação de agendamento pelo site.','Nome: '+payload.name,'Telefone: '+payload.phone,'Serviço: '+payload.service,'Data desejada: '+payload.date,'Horário desejado: '+payload.time,'Observações: '+(payload.notes||'Não informado'),'Código da solicitação: '+result.id,'','Pode confirmar se há disponibilidade?'].join('\n');
-        window.location.href='https://wa.me/5532988889108?text='+encodeURIComponent(msg);
+        window.location.href='https://wa.me/5532999953215?text='+encodeURIComponent(msg);
       } catch(err) {
         availabilityHint.textContent=err.message||'Não foi possível registrar a solicitação. Tente outro horário.';
         availabilityHint.scrollIntoView({behavior:'smooth',block:'center'});
