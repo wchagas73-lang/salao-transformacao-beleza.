@@ -213,6 +213,13 @@ export async function onRequest({request, env}) {
       const result=await env.DB.prepare("SELECT a.id,a.customer_name,a.customer_phone,a.starts_at,a.status,a.customer_notes,a.internal_notes,a.created_at,s.name AS service_name FROM appointments a LEFT JOIN services s ON s.id=a.service_id ORDER BY a.starts_at DESC LIMIT 300").all();
       return json({appointments:result.results || []});
     }
+    if (path.startsWith("/admin/appointments/") && request.method === "DELETE") {
+      const id=path.split("/").pop();
+      if(!id) return json({error:"Agendamento inválido."},400);
+      const result=await env.DB.prepare("DELETE FROM appointments WHERE id=?").bind(id).run();
+      if(!result.meta?.changes) return json({error:"Agendamento não encontrado."},404);
+      return json({ok:true,message:"Agendamento excluído."});
+    }
     if (path.startsWith("/admin/appointments/") && request.method === "PATCH") {
       const id=path.split("/").pop(); let body; try { body=await request.json(); } catch { return json({error:"Dados inválidos."},400); }
       const allowed=new Set(["requested","confirmed","cancelled","completed","no_show"]);
