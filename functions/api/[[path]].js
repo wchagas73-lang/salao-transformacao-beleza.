@@ -127,7 +127,7 @@ export async function onRequest({request, env}) {
   if (path === "/admin/login" && request.method === "POST") {
     let body; try { body=await request.json(); } catch { return json({error:"Dados inválidos."},400); }
     if (!body || typeof body !== "object" || Array.isArray(body)) return json({error:"Dados inválidos."},400);
-    if (!env.ADMIN_PASSWORD || env.ADMIN_PASSWORD.length<12 || !env.SESSION_SECRET || env.SESSION_SECRET.length<32) return json({error:"Configure ADMIN_PASSWORD com ao menos 12 caracteres e SESSION_SECRET com ao menos 32 caracteres."},503);
+    if (!env.ADMIN_PASSWORD || env.ADMIN_PASSWORD.length<12 || !env.SESSION_SECRET || env.SESSION_SECRET.length<32) return json({error:"Diagnóstico temporário: ADMIN_PASSWORD presente="+Boolean(env.ADMIN_PASSWORD)+", tamanho="+(env.ADMIN_PASSWORD?.length||0)+"; SESSION_SECRET presente="+Boolean(env.SESSION_SECRET)+", tamanho="+(env.SESSION_SECRET?.length||0)+"; DB presente="+Boolean(env.DB)+". Não compartilhe valores de senhas."},503);
     const supplied=cleanText(body.password,200);
     const ip = request.headers.get("CF-Connecting-IP") || "unknown";
     const ipHash = await hashValue(ip);
