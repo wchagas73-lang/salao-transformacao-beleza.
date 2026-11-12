@@ -120,7 +120,7 @@
 <body>
   <header class="top"><div class="wrap nav">
     <a class="brand" href="#">Transformação <span>e Beleza Hair</span></a>
-    <nav class="links"><a href="#serviceCatalog">Serviços</a><a href="#sobre">Sobre</a><a href="#agendar">Agendar</a><a href="/admin">Painel Administrativo</a></nav>
+    <nav class="links"><a href="#servicos">Serviços</a><a href="#sobre">Sobre</a><a href="#agendar">Agendar</a><a href="/admin">Painel Administrativo</a></nav>
   </div></header>
   <main>
     <div class="wrap hero">
@@ -135,9 +135,15 @@
       <div class="about-mark"><b>Cátia Souza</b><span>TRANSFORMAÇÃO E BELEZA HAIR</span></div>
       <div><div class="eyebrow">Quem cuida de você</div><h2>Seu momento de se sentir ainda mais bonita.</h2><p>Cátia Souza recebe cada cliente com atenção e cuidado, buscando entender o resultado desejado e indicar o serviço mais adequado. Um atendimento próximo, pensado para valorizar sua beleza.</p><p><strong style="color:var(--gold)">Endereço:</strong> Av. 7 de Setembro, 865, Condomínio Edifício Solar Paraíbuna (Galeria), Juiz de Fora/MG.</p></div>
     </div></section>
+    <section id="servicos" class="services-section">
+      <div class="wrap">
+        <div class="section-head"><div class="eyebrow">Nossos cuidados</div><h2>Serviços e valores</h2><p>Conheça os procedimentos disponíveis, consulte os valores e escolha o que deseja realizar.</p></div>
+        <div id="serviceCatalog" class="service-catalog" aria-label="Catálogo de serviços" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:24px 0"></div>
+        <p id="catalogStatus" role="status" style="color:var(--muted);font:13px/1.6 Arial,sans-serif">Carregando serviços e valores...</p>
+      </div>
+    </section>
     <section id="agendar"><div class="wrap booking">
       <div class="booking-info"><div class="eyebrow">Vamos conversar?</div><h2>Solicite seu horário.</h2><p>Preencha seus dados e envie sua solicitação pelo WhatsApp. O salão confirmará a disponibilidade do horário com você.</p><p><strong style="color:var(--gold)">WhatsApp:</strong> (32) 98888-9108</p></div>
-      <div id="serviceCatalog" class="service-catalog" aria-label="Catálogo de serviços" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:24px 0"></div>
       <form class="form" id="bookingForm" novalidate><div class="form-grid">
         <input id="service" type="hidden">
         <div class="field full"><label>Serviços escolhidos</label><div id="selectedServices" style="background:#100e0d;border:1px solid #59482f;border-radius:10px;padding:12px;color:#f5eee3"><p id="selectedServicesEmpty" style="margin:0;color:#b8aca0;font:12px/1.5 Arial,sans-serif">Escolha um ou mais serviços no catálogo acima.</p><div id="selectedServicesList"></div><button id="addAnotherService" type="button" class="btn secondary" style="margin-top:10px;padding:9px 14px;min-height:38px">+ Adicionar outro serviço</button></div></div>
@@ -199,7 +205,10 @@
         const settings=await response.json();
         const percent=Number(settings.deposit_percent)||0;window.bookingDepositPercent=percent;window.bookingServicePrices=settings.service_prices||{};window.bookingServicePercents=settings.service_deposit_percents||{};window.bookingServicesById={};serviceInput.innerHTML='<option value="">Selecione um serviço</option>';
         const catalog=document.getElementById('serviceCatalog');catalog.innerHTML='';
-        (settings.services||[]).forEach(service=>{
+        const catalogStatus=document.getElementById('catalogStatus');const services=settings.services||[];
+        if(!services.length){catalogStatus.textContent='Nenhum serviço ativo foi encontrado. A proprietária pode ativar e cadastrar os serviços no painel administrativo.';return}
+        catalogStatus.textContent='';
+        services.forEach(service=>{
           window.bookingServicesById[service.id]=service.name;
           const option=document.createElement('option');option.value=service.id;option.textContent=service.name;serviceInput.append(option);
           const card=document.createElement('button');card.type='button';card.style.cssText='text-align:left;background:#191614;border:1px solid #59482f;border-radius:14px;padding:12px;color:#f5eee3;cursor:pointer;display:flex;flex-direction:column;align-items:stretch;min-height:100%';
@@ -227,7 +236,7 @@
         renderSelectedServices();renderCatalogSelection();updateSelectedPrice();
         if(percent>0||Object.values(window.bookingServicePercents).some(value=>Number(value)>0)){notice.hidden=false;notice.textContent='O sinal pode variar conforme o serviço. Confira o percentual e o valor calculado após selecionar o procedimento. Envie o comprovante pelo WhatsApp; o horário só será confirmado pelo salão após a conferência.'}
         else{notice.hidden=true;notice.textContent=''}
-      }catch{notice.hidden=true}
+      }catch(error){notice.hidden=true;const catalogStatus=document.getElementById('catalogStatus');if(catalogStatus)catalogStatus.textContent='Não foi possível carregar o catálogo agora. Atualize a página ou tente novamente.';console.error('Falha ao carregar catálogo de serviços:',error)}
     }
     window.bookingDepositPromise=loadDepositNotice();
     const dateInput=document.getElementById('date');
