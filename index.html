@@ -83,7 +83,7 @@
     <section id="agendar"><div class="wrap booking">
       <div class="booking-info"><div class="eyebrow">Vamos conversar?</div><h2>Solicite seu horário.</h2><p>Preencha seus dados e envie sua solicitação pelo WhatsApp. O salão confirmará a disponibilidade do horário com você.</p><p><strong style="color:var(--gold)">WhatsApp:</strong> (32) 98888-9108</p></div>
       <form class="form" id="bookingForm"><div class="form-grid">
-        <div class="field full"><label for="service">Serviço desejado</label><select id="service" required><option value="">Selecione um serviço</option><option>Mega Hair</option><option>Hidratação</option><option>Progressivas</option><option>Corte</option><option>Escova</option><option>Luzes</option><option>Relaxamento</option></select></div>
+        <div class="field full"><label for="service">Serviço desejado</label><select id="service" required><option value="">Carregando serviços...</option></select></div>
         <div class="field"><label for="date">Data desejada</label><input id="date" type="date" required></div>
         <div class="field"><label for="time">Horário desejado</label><input id="time" type="time" list="availableSlots" required><datalist id="availableSlots"></datalist><small id="availabilityHint" style="color:var(--muted);font:11px/1.5 Arial,sans-serif">O salão confirmará a disponibilidade do horário solicitado.</small></div>
         <div class="field"><label for="name">Seu nome</label><input id="name" type="text" placeholder="Nome completo" required></div>
@@ -97,6 +97,7 @@
     document.getElementById('year').textContent=new Date().getFullYear();
     window.bookingDepositPercent=0;
     window.bookingServicePrices={};
+    window.bookingServicesById={};
     const money=value=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(value)||0);
     function updateSelectedPrice(){
       const service=serviceInput.value, price=Number(window.bookingServicePrices[service]||0), percent=Number(window.bookingDepositPercent)||0;
@@ -112,7 +113,7 @@
         const response=await fetch('/api/booking-settings',{cache:'no-store'});
         if(!response.ok)return;
         const settings=await response.json();
-        const percent=Number(settings.deposit_percent)||0;window.bookingDepositPercent=percent;window.bookingServicePrices=settings.service_prices||{};updateSelectedPrice();
+        const percent=Number(settings.deposit_percent)||0;window.bookingDepositPercent=percent;window.bookingServicePrices=settings.service_prices||{};window.bookingServicesById={};serviceInput.innerHTML='<option value="">Selecione um serviço</option>';(settings.services||[]).forEach(service=>{window.bookingServicesById[service.id]=service.name;const option=document.createElement('option');option.value=service.id;option.textContent=service.name;serviceInput.append(option)});updateSelectedPrice();
         if(percent>0){notice.hidden=false;notice.textContent='Para confirmar o agendamento, é necessário pagar um sinal de '+percent+'% do valor do serviço. Após a solicitação, envie o comprovante pelo WhatsApp. O horário só será confirmado pelo salão após a conferência.'}
         else{notice.hidden=true;notice.textContent=''}
       }catch{notice.hidden=true}
@@ -169,7 +170,7 @@
         const response=await fetch('/api/request',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
         const result=await response.json();
         if(!response.ok) throw new Error(result.error||'Não foi possível registrar a solicitação.');
-        const msg=['Olá, Cátia! Registrei uma solicitação de agendamento pelo site.','Nome: '+payload.name,'Telefone: '+payload.phone,'Serviço: '+payload.service,'Data desejada: '+payload.date,'Horário desejado: '+payload.time,'Observações: '+(payload.notes||'Não informado'),'Código da solicitação: '+result.id,'','Pode confirmar se há disponibilidade?','Valor demonstrativo do serviço: '+new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(window.bookingServicePrices[payload.service])||0),...(window.bookingDepositPercent>0?['Sinal de '+window.bookingDepositPercent+'%: '+new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Math.round((Number(window.bookingServicePrices[payload.service])||0)*window.bookingDepositPercent)/100),'Restante: '+new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format((Number(window.bookingServicePrices[payload.service])||0)-Math.round((Number(window.bookingServicePrices[payload.service])||0)*window.bookingDepositPercent)/100),'Após realizar o pagamento do sinal, vou enviar o comprovante nesta conversa.']:[]) ].join('\n');
+        const msg=['Olá, Cátia! Registrei uma solicitação de agendamento pelo site.','Nome: '+payload.name,'Telefone: '+payload.phone,'Serviço: '+(window.bookingServicesById[payload.service]||payload.service),'Data desejada: '+payload.date,'Horário desejado: '+payload.time,'Observações: '+(payload.notes||'Não informado'),'Código da solicitação: '+result.id,'','Pode confirmar se há disponibilidade?','Valor demonstrativo do serviço: '+new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(window.bookingServicePrices[payload.service])||0),...(window.bookingDepositPercent>0?['Sinal de '+window.bookingDepositPercent+'%: '+new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Math.round((Number(window.bookingServicePrices[payload.service])||0)*window.bookingDepositPercent)/100),'Restante: '+new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format((Number(window.bookingServicePrices[payload.service])||0)-Math.round((Number(window.bookingServicePrices[payload.service])||0)*window.bookingDepositPercent)/100),'Após realizar o pagamento do sinal, vou enviar o comprovante nesta conversa.']:[]) ].join('\n');
         window.location.href='https://wa.me/5532999953215?text='+encodeURIComponent(msg);
       } catch(err) {
         availabilityHint.textContent=err.message||'Não foi possível registrar a solicitação. Tente outro horário.';
