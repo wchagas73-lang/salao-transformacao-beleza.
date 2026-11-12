@@ -1,5 +1,5 @@
 const COOKIE = "salon_admin";
-const SESSION_SECONDS = 60 * 60 * 8;
+const SESSION_SECONDS = 60 * 60 * 24 * 30;
 const ALLOWED_SERVICES = new Set(["Mega Hair","Hidratação","Progressivas","Corte","Escova","Luzes","Relaxamento"]);
 
 function json(data, status = 200, headers = {}) {
