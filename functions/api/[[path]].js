@@ -76,7 +76,7 @@ export async function onRequest({request, env}) {
     const toMin=s=>Number(s.slice(0,2))*60+Number(s.slice(3,5)),open=toMin(hours.open),close=toMin(hours.close);
     const intervalRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='slot_interval_minutes'").first();
     const savedInterval=Number(intervalRow?.setting_value);
-    const interval=Number.isInteger(savedInterval)&&savedInterval>=1&&savedInterval<=720?savedInterval:60;
+    const interval=Number.isInteger(savedInterval)&&savedInterval>=1&&savedInterval<=720?savedInterval:30;
     const dayStart=date+"T00:00:00-03:00",nextDay=new Date(Date.UTC(year,month-1,day+1)).toISOString().slice(0,10),dayEnd=nextDay+"T00:00:00-03:00";
     const busy=await env.DB.prepare("SELECT starts_at,ends_at FROM appointments WHERE status IN ('requested','confirmed') AND starts_at < ? AND (ends_at > ? OR (ends_at IS NULL AND starts_at >= ?))").bind(dayEnd,dayStart,dayStart).all();
     const blocked=await env.DB.prepare("SELECT starts_at,ends_at,reason FROM blocked_periods WHERE starts_at < ? AND ends_at > ? ORDER BY starts_at").bind(dayEnd,dayStart).all();
@@ -125,7 +125,7 @@ export async function onRequest({request, env}) {
       const endDate=new Date(endEpoch+3*60*60000).toISOString().slice(0,19);endsAt=endDate+"-03:00";
       const intervalRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='slot_interval_minutes'").first();
       const savedInterval=Number(intervalRow?.setting_value);
-      const interval=Number.isInteger(savedInterval)&&savedInterval>=1&&savedInterval<=720?savedInterval:60;
+      const interval=Number.isInteger(savedInterval)&&savedInterval>=1&&savedInterval<=720?savedInterval:30;
       if(startMin<toMin(hours.open)||startMin+duration>toMin(hours.close)||(startMin-toMin(hours.open))%interval!==0)return json({error:"Esse horário está fora da agenda configurada para a duração total dos serviços."},409);
       const blocked=await env.DB.prepare("SELECT reason FROM blocked_periods WHERE starts_at < ? AND ends_at > ? ORDER BY starts_at LIMIT 1").bind(endsAt,startsAt).first();
       if(blocked)return json({error:"Este horário está bloqueado"+(blocked.reason?": "+blocked.reason:"")+". Escolha outro horário."},409);
