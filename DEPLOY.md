@@ -17,9 +17,13 @@ O site público continua como demonstração com solicitação via WhatsApp. O p
 5. Em Pages > Settings > Environment variables and secrets, cadastrar os segredos `ADMIN_PASSWORD` e `SESSION_SECRET`. Use uma senha forte e um segredo aleatório longo, diferentes entre si. Aplicar em Production e Preview conforme necessário.
 6. Fazer novo deploy. O arquivo `wrangler.toml` não contém ID fictício de banco: o vínculo real é feito no painel Cloudflare.
 
-## Limitações deliberadas da primeira versão
+## Limitações e cuidados antes de operar
+
 - Solicitações públicas são gravadas como `requested`, nunca confirmadas automaticamente.
 - O painel permite alterar status.
-- Ainda não existe grade de horários livres, duração dos procedimentos, bloqueio automático de sobreposição nem confirmação automática. Isso só deve ser habilitado após definir expediente, duração e intervalos com a proprietária.
+- O painel agora permite configurar dias/horários de funcionamento, duração dos serviços e intervalo entre opções.
+- A consulta pública de horários livres só é ativada quando há expediente e duração cadastrados para o serviço.
+- O backend valida sobreposição e tenta inserir a solicitação de forma atômica para evitar dois pedidos no mesmo intervalo. Pedidos continuam com status `requested` até a proprietária confirmar.
+- Ainda não há mensagens automáticas de confirmação, lembretes, cancelamento pelo cliente ou sincronização com Google Calendar.
 - Antes de receber clientes reais, adicionar proteção contra abuso/rate limiting, política de privacidade, retenção e backup.
 - Não compartilhar a senha administrativa com clientes nem colocá-la no código-fonte.
