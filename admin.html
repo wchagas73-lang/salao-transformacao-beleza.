@@ -97,13 +97,13 @@ async function openConfig(){
  try{
   const data=await api('/admin/config');
   $('depositPercent').value=String(Number(data.settings.deposit_percent)||0);
-  const weekly=data.settings.weekly_hours||{'0':null,'1':{open:'09:00',close:'20:00'},'2':{open:'09:00',close:'20:00'},'3':{open:'09:00',close:'20:00'},'4':{open:'09:00',close:'20:00'},'5':{open:'09:00',close:'20:00'},'6':{open:'09:00',close:'20:00'}};
+  const weekly=data.settings.weekly_hours||{'0':null,'1':{open:'08:00',close:'20:00'},'2':{open:'08:00',close:'20:00'},'3':{open:'08:00',close:'20:00'},'4':{open:'08:00',close:'20:00'},'5':{open:'08:00',close:'20:00'},'6':{open:'08:00',close:'20:00'}};
   const hours=$('hoursEditor');hours.innerHTML='';
   weekdays.forEach((day,i)=>{
    const value=weekly[String(i)],row=document.createElement('div');row.className='day-row';
    const name=document.createElement('strong');name.textContent=day;
    const check=document.createElement('input');check.type='checkbox';check.checked=!!value;check.setAttribute('aria-label',day+' atende');
-   const open=document.createElement('input');open.type='time';open.value=value?.open||'09:00';open.disabled=!check.checked;
+   const open=document.createElement('input');open.type='time';open.value=value?.open||'08:00';open.disabled=!check.checked;
    const close=document.createElement('input');close.type='time';close.value=value?.close||'20:00';close.disabled=!check.checked;
    check.addEventListener('change',()=>{open.disabled=!check.checked;close.disabled=!check.checked});
    row.append(name,check,open,close);row.dataset.day=String(i);hours.append(row);
@@ -134,7 +134,7 @@ async function openConfig(){
    label.append(span,input);durations.append(label);
   });
   $('durationHint').textContent='Escolha horas ou minutos e digite livremente a duração de cada serviço.';
-  $('slotInterval').value=String(data.settings.slot_interval_minutes||60);
+  $('slotInterval').value=String(data.settings.slot_interval_minutes||30);
   $('configMessage').textContent='Preços demonstrativos editáveis. Ajuste também os horários e durações do salão.';
  }catch(err){$('configMessage').textContent=err.message}
 }
