@@ -155,6 +155,8 @@ export async function onRequest({request, env}) {
       const start=cleanText(body.starts_at,25), end=cleanText(body.ends_at,25), reason=cleanText(body.reason,160);
       const startMs=Date.parse(start), endMs=Date.parse(end);
       if(!Number.isFinite(startMs)||!Number.isFinite(endMs)||endMs<=startMs) return json({error:"Informe início e fim válidos. O fim deve ser posterior ao início."},400);
+      const conflicts=await env.DB.prepare("SELECT COUNT(*) AS total FROM appointments WHERE status IN ('requested','confirmed') AND starts_at < ? AND (ends_at > ? OR (ends_at IS NULL AND starts_at >= ?))").bind(end,start,start).first();
+      if((conflicts?.total||0)>0) return json({error:"Já existem agendamentos nesse período. Resolva esses pedidos antes de bloquear o horário."},409);
       const id=crypto.randomUUID();
       await env.DB.prepare("INSERT INTO blocked_periods(id,starts_at,ends_at,reason) VALUES(?,?,?,?)").bind(id,start,end,reason).run();
       return json({ok:true,id},201);
