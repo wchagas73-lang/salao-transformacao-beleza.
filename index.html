@@ -134,8 +134,28 @@
     const dateInput=document.getElementById('date');
     const today=new Date();dateInput.min=new Date(today.getTime()-today.getTimezoneOffset()*60000).toISOString().slice(0,10);
     const serviceInput=document.getElementById('service'), timeInput=document.getElementById('time'), slotsList=document.getElementById('availableSlots'), availabilityHint=document.getElementById('availabilityHint');
+    let currentAvailability=null;
+    function explainSelectedTime(){
+      if(!currentAvailability||!dateInput.value||!timeInput.value)return;
+      const selectedStart=Date.parse(dateInput.value+'T'+timeInput.value+':00-03:00');
+      if(!Number.isFinite(selectedStart))return;
+      const selectedEnd=selectedStart+(Number(currentAvailability.duration_minutes)||0)*60000;
+      const blocked=(currentAvailability.blocked_periods||[]).find(period=>{
+        const start=Date.parse(period.starts_at),end=Date.parse(period.ends_at);
+        return Number.isFinite(start)&&Number.isFinite(end)&&selectedStart<end&&selectedEnd>start;
+      });
+      if(blocked){
+        availabilityHint.textContent='Este horário está bloqueado'+(blocked.reason?': '+blocked.reason:'')+'. Escolha outro horário.';
+        return;
+      }
+      if(!(currentAvailability.slots||[]).includes(timeInput.value)){
+        availabilityHint.textContent='Este horário não está disponível na agenda. Escolha um dos horários sugeridos ou tente outra data.';
+        return;
+      }
+      availabilityHint.textContent='Horário disponível para solicitar. O agendamento ainda depende da confirmação do salão.';
+    }
     async function loadAvailableSlots(){
-      slotsList.innerHTML='';
+      slotsList.innerHTML='';currentAvailability=null;
       if(!serviceInput.value||!dateInput.value){availabilityHint.textContent='Escolha o serviço e a data para consultar os horários.';return}
       availabilityHint.textContent='Consultando horários...';
       try{
@@ -143,11 +163,14 @@
         const data=await response.json();
         if(!response.ok) throw new Error(data.error||'Não foi possível consultar a agenda.');
         if(!data.configured){availabilityHint.textContent='A agenda ainda está sendo configurada. Você pode solicitar um horário, sujeito à confirmação do salão.';return}
+        currentAvailability=data;
         (data.slots||[]).forEach(slot=>{const option=document.createElement('option');option.value=slot;slotsList.append(option)});
         availabilityHint.textContent=data.slots?.length?'Horários sugeridos conforme a agenda do salão. O pedido ainda depende de confirmação.':'Não há horários livres nessa data. Tente outra data.';
+        explainSelectedTime();
       }catch(err){availabilityHint.textContent='Não foi possível consultar a agenda agora. O salão confirmará manualmente.'}
     }
     serviceInput.addEventListener('change',loadAvailableSlots);dateInput.addEventListener('change',loadAvailableSlots);
+    timeInput.addEventListener('change',explainSelectedTime);
     document.getElementById('bookingForm').addEventListener('submit',async function(e){
       e.preventDefault();
       const v=id=>document.getElementById(id).value.trim();
@@ -161,8 +184,10 @@
         const msg=['Olá, Cátia! Registrei uma solicitação de agendamento pelo site.','Nome: '+payload.name,'Telefone: '+payload.phone,'Serviço: '+payload.service,'Data desejada: '+payload.date,'Horário desejado: '+payload.time,'Observações: '+(payload.notes||'Não informado'),'Código da solicitação: '+result.id,'','Pode confirmar se há disponibilidade?'].join('\n');
         window.location.href='https://wa.me/5532988889108?text='+encodeURIComponent(msg);
       } catch(err) {
-        const msg=['Olá, Cátia! Estou enviando uma solicitação de agendamento pelo WhatsApp.','Nome: '+payload.name,'Telefone: '+payload.phone,'Serviço: '+payload.service,'Data desejada: '+payload.date,'Horário desejado: '+payload.time,'Observações: '+(payload.notes||'Não informado'),'','Aviso: o sistema online ainda não registrou esta solicitação. Por favor, confirme manualmente pelo WhatsApp.'].join('\n');
-        window.location.href='https://wa.me/5532988889108?text='+encodeURIComponent(msg);
+        availabilityHint.textContent=err.message||'Não foi possível registrar a solicitação. Tente outro horário.';
+        availabilityHint.scrollIntoView({behavior:'smooth',block:'center'});
+        await loadAvailableSlots();
+        if(timeInput.value) explainSelectedTime();
       } finally {
         button.disabled=false; button.textContent='Enviar solicitação pelo WhatsApp';
       }
