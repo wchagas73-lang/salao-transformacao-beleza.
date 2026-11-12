@@ -61,7 +61,7 @@ export async function onRequest({request, env}) {
     const idsRaw=cleanText(url.searchParams.get("services")||url.searchParams.get("service"),400);
     const serviceIds=[...new Set(idsRaw.split(",").map(x=>cleanText(x,50)).filter(Boolean))].slice(0,7);
     const date=cleanText(url.searchParams.get("date"),10);
-    if (!serviceIds.length || !/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) return json({error:"Informe serviços e data válidos."},400);
+    if (!serviceIds.length || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return json({error:"Informe serviços e data válidos."},400);
     const rows=await env.DB.prepare("SELECT id,duration_minutes,is_active FROM services WHERE id IN ("+serviceIds.map(()=>"?").join(",")+")").bind(...serviceIds).all();
     if((rows.results||[]).length!==serviceIds.length || (rows.results||[]).some(x=>!x.is_active)) return json({error:"Um dos serviços não está disponível."},400);
     const duration=(rows.results||[]).reduce((sum,x)=>sum+(Number(x.duration_minutes)||60),0);
@@ -71,7 +71,7 @@ export async function onRequest({request, env}) {
     const [year,month,day]=date.split("-").map(Number), dayDate=new Date(Date.UTC(year,month-1,day));
     if(dayDate.getUTCFullYear()!==year||dayDate.getUTCMonth()!==month-1||dayDate.getUTCDate()!==day) return json({error:"Data inválida."},400);
     const hours=weekly[String(dayDate.getUTCDay())];
-    if(!hours || !/^\\d{2}:\\d{2}$/.test(hours.open||"") || !/^\\d{2}:\\d{2}$/.test(hours.close||"")) return json({configured:true,slots:[],duration_minutes:duration});
+    if(!hours || !/^\d{2}:\d{2}$/.test(hours.open||"") || !/^\d{2}:\d{2}$/.test(hours.close||"")) return json({configured:true,slots:[],duration_minutes:duration});
     const toMin=s=>Number(s.slice(0,2))*60+Number(s.slice(3,5)),open=toMin(hours.open),close=toMin(hours.close);
     const intervalRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='slot_interval_minutes'").first();
     const interval=Math.min(120,Math.max(15,Number(intervalRow?.setting_value)||30));
@@ -94,7 +94,7 @@ export async function onRequest({request, env}) {
     const name=cleanText(body.name,100),phone=cleanText(body.phone,30),date=cleanText(body.date,10),time=cleanText(body.time,5),notes=cleanText(body.notes,500);
     const requested=Array.isArray(body.services)?body.services:[body.service];
     const serviceIds=[...new Set(requested.map(x=>cleanText(x,50)).filter(Boolean))].slice(0,7);
-    if(name.length<2||phone.replace(/\\D/g,"").length<10||!serviceIds.length||!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)||!/^\\d{2}:\\d{2}$/.test(time))return json({error:"Confira os campos obrigatórios e selecione ao menos um serviço."},400);
+    if(name.length<2||phone.replace(/\D/g,"").length<10||!serviceIds.length||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^\d{2}:\d{2}$/.test(time))return json({error:"Confira os campos obrigatórios e selecione ao menos um serviço."},400);
     const [year,month,day]=date.split("-").map(Number),[hour,minute]=time.split(":").map(Number),candidate=new Date(Date.UTC(year,month-1,day,hour,minute));
     if(candidate.getUTCFullYear()!==year||candidate.getUTCMonth()!==month-1||candidate.getUTCDate()!==day||hour>23||minute>59)return json({error:"Data ou horário inválido."},400);
     const startsAt=date+"T"+time+":00-03:00";
