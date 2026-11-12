@@ -195,7 +195,7 @@ export async function onRequest({request, env}) {
       ];
       for(const [service,duration] of Object.entries(body.durations)){
         if(!ALLOWED_SERVICES.has(service)) return json({error:"Serviço inválido."},400);
-        if(duration!==null && (!Number.isInteger(duration)||duration<15||duration>720)) return json({error:"Duração deve ser entre 15 e 720 minutos."},400);
+        if(duration!==null && (!Number.isInteger(duration)||duration<1||duration>720)) return json({error:"Informe uma duração válida entre 1 e 720 minutos."},400);
         statements.push(env.DB.prepare("UPDATE services SET duration_minutes=? WHERE id=?").bind(duration,service));
       }
       await env.DB.batch(statements);
