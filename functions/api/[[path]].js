@@ -118,6 +118,7 @@ export async function onRequest({request, env}) {
   }
   if (path === "/admin/login" && request.method === "POST") {
     let body; try { body=await request.json(); } catch { return json({error:"Dados inválidos."},400); }
+    if (!body || typeof body !== "object" || Array.isArray(body)) return json({error:"Dados inválidos."},400);
     if (!env.ADMIN_PASSWORD || !env.SESSION_SECRET) return json({error:"Configure ADMIN_PASSWORD e SESSION_SECRET nos segredos do projeto."},503);
     const supplied=cleanText(body.password,200);
     const ip = request.headers.get("CF-Connecting-IP") || "unknown";
