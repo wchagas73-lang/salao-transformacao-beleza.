@@ -107,7 +107,7 @@
         else{notice.hidden=true;notice.textContent=''}
       }catch{notice.hidden=true}
     }
-    loadDepositNotice();
+    window.bookingDepositPromise=loadDepositNotice();
     const dateInput=document.getElementById('date');
     const today=new Date();dateInput.min=new Date(today.getTime()-today.getTimezoneOffset()*60000).toISOString().slice(0,10);
     const serviceInput=document.getElementById('service'), timeInput=document.getElementById('time'), slotsList=document.getElementById('availableSlots'), availabilityHint=document.getElementById('availabilityHint');
@@ -150,6 +150,7 @@
     timeInput.addEventListener('change',explainSelectedTime);
     document.getElementById('bookingForm').addEventListener('submit',async function(e){
       e.preventDefault();
+      await window.bookingDepositPromise;
       const v=id=>document.getElementById(id).value.trim();
       const payload={name:v('name'),phone:v('phone'),service:v('service'),date:v('date'),time:v('time'),notes:v('details')};
       const button=this.querySelector('button[type="submit"]');
