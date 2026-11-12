@@ -97,7 +97,7 @@ async function openConfig(){
  try{
   const data=await api('/admin/config');
   $('depositPercent').value=String(Number(data.settings.deposit_percent)||0);
-  const weekly=data.settings.weekly_hours||{'0':null,'1':{open:'09:00',close:'19:00'},'2':{open:'09:00',close:'19:00'},'3':{open:'09:00',close:'19:00'},'4':{open:'09:00',close:'19:00'},'5':{open:'09:00',close:'19:00'},'6':{open:'09:00',close:'19:00'}};
+  const weekly=data.settings.weekly_hours||{'0':null,'1':{open:'09:00',close:'20:00'},'2':{open:'09:00',close:'20:00'},'3':{open:'09:00',close:'20:00'},'4':{open:'09:00',close:'20:00'},'5':{open:'09:00',close:'20:00'},'6':{open:'09:00',close:'20:00'}};
   const hours=$('hoursEditor');hours.innerHTML='';
   weekdays.forEach((day,i)=>{
    const value=weekly[String(i)],row=document.createElement('div');row.className='day-row';
