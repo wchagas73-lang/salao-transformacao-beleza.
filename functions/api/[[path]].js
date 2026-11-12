@@ -68,6 +68,8 @@ export async function onRequest({request, env}) {
     const hoursRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='weekly_hours'").first();
     const defaultWeekly={"0":null,"1":{open:"09:00",close:"20:00"},"2":{open:"09:00",close:"20:00"},"3":{open:"09:00",close:"20:00"},"4":{open:"09:00",close:"20:00"},"5":{open:"09:00",close:"20:00"},"6":{open:"09:00",close:"20:00"}};
     let weekly=defaultWeekly; try { if(hoursRow?.setting_value) weekly=JSON.parse(hoursRow.setting_value); } catch { weekly=defaultWeekly; }
+    weekly=Object.fromEntries(Object.entries(weekly).map(([day,hours])=>[day,hours?{open:"09:00",close:"20:00"}:null]));
+    if(hoursRow?.setting_value) await env.DB.prepare("UPDATE salon_settings SET setting_value=?,updated_at=CURRENT_TIMESTAMP WHERE setting_key='weekly_hours'").bind(JSON.stringify(weekly)).run();
     const [year,month,day]=date.split("-").map(Number), dayDate=new Date(Date.UTC(year,month-1,day));
     if(dayDate.getUTCFullYear()!==year||dayDate.getUTCMonth()!==month-1||dayDate.getUTCDate()!==day) return json({error:"Data inválida."},400);
     const hours=weekly[String(dayDate.getUTCDay())];
@@ -114,6 +116,8 @@ export async function onRequest({request, env}) {
     const hoursRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='weekly_hours'").first();
     const defaultWeekly={"0":null,"1":{open:"09:00",close:"20:00"},"2":{open:"09:00",close:"20:00"},"3":{open:"09:00",close:"20:00"},"4":{open:"09:00",close:"20:00"},"5":{open:"09:00",close:"20:00"},"6":{open:"09:00",close:"20:00"}};
     let weekly=defaultWeekly;try{if(hoursRow?.setting_value)weekly=JSON.parse(hoursRow.setting_value)}catch{weekly=defaultWeekly}
+    weekly=Object.fromEntries(Object.entries(weekly).map(([day,hours])=>[day,hours?{open:"09:00",close:"20:00"}:null]));
+    if(hoursRow?.setting_value) await env.DB.prepare("UPDATE salon_settings SET setting_value=?,updated_at=CURRENT_TIMESTAMP WHERE setting_key='weekly_hours'").bind(JSON.stringify(weekly)).run();
     let endsAt=null;
     {
       const weekday=new Date(Date.UTC(year,month-1,day)).getUTCDay(),hours=weekly&&weekly[String(weekday)];
@@ -201,6 +205,10 @@ if (path === "/admin/config" && request.method === "GET") {
         env.DB.prepare("SELECT setting_key,setting_value FROM salon_settings").all()
       ]);
       const config={}; for(const row of settings.results||[]){try{config[row.setting_key]=JSON.parse(row.setting_value)}catch{config[row.setting_key]=row.setting_value}}
+      if(config.weekly_hours&&typeof config.weekly_hours==="object"){
+        config.weekly_hours=Object.fromEntries(Object.entries(config.weekly_hours).map(([day,hours])=>[day,hours?{open:"09:00",close:"20:00"}:null]));
+        await env.DB.prepare("UPDATE salon_settings SET setting_value=?,updated_at=CURRENT_TIMESTAMP WHERE setting_key='weekly_hours'").bind(JSON.stringify(config.weekly_hours)).run();
+      }
       config.service_prices={...DEFAULT_SERVICE_PRICES,...(config.service_prices||{})};
       config.service_deposit_percents=config.service_deposit_percents||{};
       return json({services:services.results||[],settings:config});
