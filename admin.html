@@ -172,38 +172,4 @@ $('saveConfig').addEventListener('click',async()=>{
 });
 async function initializeSession(){try{await api('/admin/appointments');$('login').classList.add('hidden');$('dashboard').classList.remove('hidden');load()}catch(err){$('dashboard').classList.add('hidden');$('login').classList.remove('hidden')}}
 initializeSession();
-</script></body></html>;const input=document.createElement('input');input.type='number';input.min='0';input.max='100000';input.step='0.01';input.inputMode='decimal';input.dataset.priceService=service.id;input.value=String(Number(data.settings.service_prices?.[service.id]??defaults[service.name]??0));label.append(span,input);prices.append(label)});const durations=$('durationEditor');durations.innerHTML='';$('durationUnit').value='hours';(data.services||[]).forEach(service=>{const label=document.createElement('label');label.className='duration-item';const span=document.createElement('span');span.textContent=service.name;const input=document.createElement('input');input.type='number';input.min='0.01';input.max='720';input.step='any';input.placeholder='Digite a duração';input.dataset.service=service.id;input.dataset.durationMinutes=String(Number(service.duration_minutes)||60);input.value=String(Number((Number(input.dataset.durationMinutes)/60).toFixed(2)));input.addEventListener('input',()=>{const n=Number(input.value);if(input.value!==''&&Number.isFinite(n)&&n>0)input.dataset.durationMinutes=String($('durationUnit').value==='hours'?n*60:n)});label.append(span,input);durations.append(label)});$('durationHint').textContent='Escolha horas ou minutos e digite livremente a duração de cada serviço.';
-  $('slotInterval').value=String(data.settings.slot_interval_minutes||30);$('configMessage').textContent='Preencha os dias e durações com base na rotina real do salão.';
- }catch(err){$('configMessage').textContent=err.message}
-}
-$('durationUnit').addEventListener('change',()=>{const toMinutes=$('durationUnit').value==='minutes';document.querySelectorAll('[data-service]').forEach(input=>{const minutes=Number(input.dataset.durationMinutes)||60;input.value=String(Number((toMinutes?minutes:minutes/60).toFixed(2)));input.min='0.01';input.max=toMinutes?'720':'12';input.step='any';input.placeholder='Digite a duração'});$('durationHint').textContent='Digite livremente a duração de cada serviço na unidade selecionada.'});
-$('configToggle').addEventListener('click',openConfig);$('closeConfig').addEventListener('click',()=>$('configPanel').classList.add('hidden'));
-async function loadBlocks(){
- const box=$('blocksList');box.innerHTML='<div class="empty">Carregando bloqueios...</div>';
- try{
-  const data=await api('/admin/blocks');box.innerHTML='';
-  if(!data.blocks.length){box.innerHTML='<div class="empty">Nenhum período bloqueado.</div>';return}
-  data.blocks.forEach(block=>{
-   const row=document.createElement('div');row.className='item';
-   const p=document.createElement('p');const start=new Date(block.starts_at),end=new Date(block.ends_at);
-   p.textContent=(Number.isNaN(start.getTime())?block.starts_at:start.toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}))+' até '+(Number.isNaN(end.getTime())?block.ends_at:end.toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}));
-   const reason=document.createElement('p');reason.textContent=block.reason||'Sem motivo informado';
-   const remove=document.createElement('button');remove.className='btn alt';remove.textContent='Liberar período';
-   remove.addEventListener('click',async()=>{if(!confirm('Deseja remover este bloqueio?'))return;try{await api('/admin/blocks/'+encodeURIComponent(block.id),{method:'DELETE'});loadBlocks()}catch(err){alert(err.message)}});
-   row.append(p,reason,remove);box.append(row);
-  });
- }catch(err){box.textContent=err.message}
-}
-$('blockForm').addEventListener('submit',async e=>{
- e.preventDefault();const start=$('blockStart').value,end=$('blockEnd').value;
- try{await api('/admin/blocks',{method:'POST',body:JSON.stringify({starts_at:start+'-03:00',ends_at:end+'-03:00',reason:$('blockReason').value})});$('blockForm').reset();loadBlocks()}catch(err){alert(err.message)}
-});
-$('saveConfig').addEventListener('click',async()=>{
- const weekly={};document.querySelectorAll('.day-row').forEach(row=>{const inputs=row.querySelectorAll('input');weekly[row.dataset.day]=inputs[0].checked?{open:inputs[1].value,close:inputs[2].value}:null});
- const durations={};const unit=$('durationUnit').value;document.querySelectorAll('[data-service]').forEach(input=>{const value=input.value===''?null:Number(input.value);durations[input.dataset.service]=value===null?null:Math.round(unit==='hours'?value*60:value)});
- $('saveConfig').disabled=true;$('configMessage').textContent='Salvando...';
- try{await api('/admin/config',{method:'PUT',body:JSON.stringify({weekly_hours:weekly,durations,slot_interval_minutes:Number($('slotInterval').value),deposit_percent:Number($('depositPercent').value)})});$('configMessage').textContent='Configuração salva. Serviços com duração cadastrada terão horários validados; os demais continuarão como solicitações manuais.'}catch(err){$('configMessage').textContent=err.message}finally{$('saveConfig').disabled=false}
-});
-async function initializeSession(){try{await api('/admin/appointments');$('login').classList.add('hidden');$('dashboard').classList.remove('hidden');load()}catch(err){$('dashboard').classList.add('hidden');$('login').classList.remove('hidden')}}
-initializeSession();
 </script></body></html>
