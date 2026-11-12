@@ -57,10 +57,41 @@ const weekdays=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-
 async function openConfig(){
  $('configPanel').classList.remove('hidden');$('configMessage').textContent='Carregando configuração...';loadBlocks();
  try{
-  const data=await api('/admin/config');$('depositPercent').value=String(Number(data.settings.deposit_percent)||0);const weekly=data.settings.weekly_hours||{};const hours=$('hoursEditor');hours.innerHTML='';
-  weekdays.forEach((day,i)=>{const value=weekly[String(i)];const row=document.createElement('div');row.className='day-row';const name=document.createElement('strong');name.textContent=day;const check=document.createElement('input');check.type='checkbox';check.checked=!!value;check.setAttribute('aria-label',day+' atende');const open=document.createElement('input');open.type='time';open.value=value?.open||'09:00';open.disabled=!check.checked;const close=document.createElement('input');close.type='time';close.value=value?.close||'18:00';close.disabled=!check.checked;check.addEventListener('change',()=>{open.disabled=!check.checked;close.disabled=!check.checked});row.append(name,check,open,close);row.dataset.day=String(i);hours.append(row)});
-  const prices=$('priceEditor');prices.innerHTML='';const defaults={"Mega Hair":300,"Hidratação":100,"Progressivas":220,"Corte":70,"Escova":60,"Luzes":350,"Relaxamento":150};(data.services||[]).forEach(service=>{const label=document.createElement('label');label.className='duration-item';const span=document.createElement('span');span.textContent=service.name+' • Rconst label=document.createElement('label');label.className='duration-item';const span=document.createElement('span');span.textContent=service.name;const input=document.createElement('input');input.type='number';input.min='0.01';input.max='720';input.step='any';input.placeholder='Digite a duração';input.dataset.service=service.id;input.dataset.durationMinutes=String(Number(service.duration_minutes)||60);input.value=String(Number((Number(input.dataset.durationMinutes)/60).toFixed(2)));input.addEventListener('input',()=>{const n=Number(input.value);if(input.value!==''&&Number.isFinite(n)&&n>0)input.dataset.durationMinutes=String($('durationUnit').value==='hours'?n*60:n)});label.append(span,input);durations.append(label)});$('durationHint').textContent='Escolha horas ou minutos e digite livremente a duração de cada serviço.';
-  $('slotInterval').value=String(data.settings.slot_interval_minutes||30);$('configMessage').textContent='Preencha os dias e durações com base na rotina real do salão.';
+  const data=await api('/admin/config');
+  $('depositPercent').value=String(Number(data.settings.deposit_percent)||0);
+  const weekly=data.settings.weekly_hours||{};
+  const hours=$('hoursEditor');hours.innerHTML='';
+  weekdays.forEach((day,i)=>{
+   const value=weekly[String(i)],row=document.createElement('div');row.className='day-row';
+   const name=document.createElement('strong');name.textContent=day;
+   const check=document.createElement('input');check.type='checkbox';check.checked=!!value;check.setAttribute('aria-label',day+' atende');
+   const open=document.createElement('input');open.type='time';open.value=value?.open||'09:00';open.disabled=!check.checked;
+   const close=document.createElement('input');close.type='time';close.value=value?.close||'18:00';close.disabled=!check.checked;
+   check.addEventListener('change',()=>{open.disabled=!check.checked;close.disabled=!check.checked});
+   row.append(name,check,open,close);row.dataset.day=String(i);hours.append(row);
+  });
+  const defaults={"Mega Hair":300,"Hidratação":100,"Progressivas":220,"Corte":70,"Escova":60,"Luzes":350,"Relaxamento":150};
+  const prices=$('priceEditor');prices.innerHTML='';
+  (data.services||[]).forEach(service=>{
+   const label=document.createElement('label');label.className='duration-item';
+   const span=document.createElement('span');span.textContent=service.name+' • preço em R$';
+   const input=document.createElement('input');input.type='number';input.min='0';input.max='100000';input.step='0.01';input.inputMode='decimal';input.dataset.priceService=service.id;
+   input.value=String(Number(data.settings.service_prices?.[service.id]??defaults[service.name]??0));
+   label.append(span,input);prices.append(label);
+  });
+  const durations=$('durationEditor');durations.innerHTML='';$('durationUnit').value='hours';
+  (data.services||[]).forEach(service=>{
+   const label=document.createElement('label');label.className='duration-item';
+   const span=document.createElement('span');span.textContent=service.name;
+   const input=document.createElement('input');input.type='number';input.min='0.01';input.max='720';input.step='any';input.placeholder='Digite a duração';
+   input.dataset.service=service.id;input.dataset.durationMinutes=String(Number(service.duration_minutes)||60);
+   input.value=String(Number((Number(input.dataset.durationMinutes)/60).toFixed(2)));
+   input.addEventListener('input',()=>{const n=Number(input.value);if(input.value!==''&&Number.isFinite(n)&&n>0)input.dataset.durationMinutes=String($('durationUnit').value==='hours'?n*60:n)});
+   label.append(span,input);durations.append(label);
+  });
+  $('durationHint').textContent='Escolha horas ou minutos e digite livremente a duração de cada serviço.';
+  $('slotInterval').value=String(data.settings.slot_interval_minutes||30);
+  $('configMessage').textContent='Preços demonstrativos editáveis. Ajuste também os horários e durações do salão.';
  }catch(err){$('configMessage').textContent=err.message}
 }
 $('durationUnit').addEventListener('change',()=>{const toMinutes=$('durationUnit').value==='minutes';document.querySelectorAll('[data-service]').forEach(input=>{const minutes=Number(input.dataset.durationMinutes)||60;input.value=String(Number((toMinutes?minutes:minutes/60).toFixed(2)));input.min='0.01';input.max=toMinutes?'720':'12';input.step='any';input.placeholder='Digite a duração'});$('durationHint').textContent='Digite livremente a duração de cada serviço na unidade selecionada.'});
