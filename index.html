@@ -188,7 +188,6 @@
   <footer><div class="wrap foot"><span>© <span id="year"></span> Transformação e Beleza Hair • Cátia Souza</span><span><a href="privacidade.html">Privacidade</a> · <a href="admin.html">Área da proprietária</a> · Juiz de Fora/MG</span></div></footer>
   <script>
     document.getElementById('year').textContent=new Date().getFullYear();
-    window.bookingDepositPercent=0;
     window.bookingServicePrices={};
     window.bookingServicePercents={};
     window.bookingServicesById={};
@@ -233,7 +232,7 @@
         const response=await fetch('/api/booking-settings',{cache:'no-store'});
         if(!response.ok){const catalogStatus=document.getElementById('catalogStatus');if(catalogStatus)catalogStatus.textContent='Não foi possível carregar os serviços. O catálogo está aguardando a conexão com o banco de dados. Atualize a página ou tente novamente.';throw new Error('API de serviços respondeu HTTP '+response.status)}
         const settings=await response.json();
-        const percent=Number(settings.deposit_percent)||0;window.bookingDepositPercent=percent;window.bookingServicePrices=settings.service_prices||{};window.bookingServicePercents=settings.service_deposit_percents||{};window.bookingServicesById={};serviceInput.innerHTML='<option value="">Selecione um serviço</option>';
+        window.bookingServicePrices=settings.service_prices||{};window.bookingServicePercents=settings.service_deposit_percents||{};window.bookingServicesById={};serviceInput.innerHTML='<option value="">Selecione um serviço</option>';
         const catalog=document.getElementById('serviceCatalog');catalog.innerHTML='';
         const catalogStatus=document.getElementById('catalogStatus');const services=settings.services||[];
         if(!services.length){catalogStatus.textContent='Nenhum serviço ativo foi encontrado. A proprietária pode ativar e cadastrar os serviços no painel administrativo.';return}
