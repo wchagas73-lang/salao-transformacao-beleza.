@@ -26,6 +26,24 @@ button,.btn{min-height:44px;touch-action:manipulation;border-radius:8px}
  .item{padding:13px}.item h3{font-size:18px}
 }
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+
+/* Identidade premium consistente com a página pública */
+:root{--bg:#0b0a09;--panel:#171410;--gold:#d8b66a;--cream:#fff8ed;--muted:#c4b8a6;--line:#4b3b25}
+body{background:radial-gradient(ellipse at 50% -20%,#241a0e 0,#0b0a09 55%);color:var(--cream)}
+.head{background:rgba(11,10,9,.94);border-bottom:1px solid var(--line);box-shadow:0 6px 20px #0005}
+.head strong{ text-shadow:0 1px 8px #d8b66a33}
+.panel,.item,.stat{background:#171410;border:1px solid var(--line);border-radius:13px;box-shadow:0 10px 25px #0005,inset 0 1px #ffffff0d}
+.panel{padding:24px}
+.stat strong{color:var(--gold)}
+.admin-tab{background:#171410;border:1px solid #59482f;color:var(--muted);border-radius:9px;transition:background .18s ease,border-color .18s ease}
+.admin-tab.active{background:linear-gradient(135deg,#e7ca87,#c39a4f);color:#17120b;border-color:#f0d99e}
+.field input,.tools input,.tools select,.item select,.day-row input[type=time],.duration-grid input{background:#0d0b09;border:1px solid #59482f;border-radius:8px;color:var(--cream)}
+.btn{border-radius:9px;background:linear-gradient(135deg,#e7ca87,#c39a4f);border:1px solid #f0d99e;box-shadow:0 5px 13px #0005,inset 0 1px #fff7}
+.btn.alt{background:#171410;color:var(--gold);border:1px solid #8b6b35;box-shadow:none}
+.item{overflow-wrap:anywhere}
+.status{display:inline-flex;padding:6px 9px;border:1px solid #8b6b35;border-radius:20px}
+@media(max-width:700px){.panel{padding:16px}.head .row{align-items:center}}
+
 </style></head><body><header class="head"><div class="wrap row"><div><strong>Transformação e Beleza Hair</strong><span>PAINEL ADMINISTRATIVO • ARCANY DIGITAL</span></div><a class="btn alt" href="/">Área do cliente</a></div></header>
 <main class="wrap main"><section id="login"><h1>Acesso da proprietária</h1><p class="muted">Área privada para acompanhar as solicitações de agendamento.</p><form class="panel" id="loginForm"><div class="field"><label for="password">Senha administrativa</label><div class="password-wrap"><input id="password" type="password" autocomplete="current-password" required><button class="password-toggle" id="togglePassword" type="button" aria-label="Mostrar senha" aria-pressed="false">Mostrar</button></div></div><button class="btn">Entrar no painel</button><p id="loginError" class="error"></p></form></section>
 <div id="adminTabs" class="admin-tabs hidden" role="tablist" aria-label="Seções do painel"><button type="button" class="admin-tab active" data-tab="appointmentsTab" role="tab" aria-selected="true">Agendamentos</button><button type="button" class="admin-tab" data-tab="servicesTab" role="tab" aria-selected="false">Serviços</button><button type="button" class="admin-tab" data-tab="scheduleTab" role="tab" aria-selected="false">Horários</button></div><section id="dashboard" class="hidden"><div id="appointmentsTab"><div class="row"><div><h1>Agendamentos</h1><p class="muted">Solicitações e status dos atendimentos.</p></div></div><div class="row" style="margin-top:20px"><button class="btn" id="refresh">Atualizar agenda</button><span class="muted" id="count"></span></div><div id="stats" class="stats"></div><div class="tools"><input id="search" type="search" placeholder="Buscar por cliente, telefone ou serviço" aria-label="Buscar agendamentos"><select id="filter" aria-label="Filtrar por status"><option value="all">Todos os status</option><option value="requested">Solicitados</option><option value="confirmed">Confirmados</option><option value="cancelled">Cancelados</option><option value="completed">Concluídos</option><option value="no_show">Não compareceu</option></select></div><div id="appointments" class="list"></div><p class="muted">Solicitações recebidas continuam pendentes até a confirmação do salão.</p></div></section>
