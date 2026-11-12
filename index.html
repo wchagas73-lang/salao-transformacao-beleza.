@@ -18,72 +18,36 @@
     @media(max-width:760px){.links{gap:12px;font-size:11px}.hero{grid-template-columns:1fr;padding:55px 0}.hero-art{min-height:310px}.services{grid-template-columns:1fr 1fr}.about{padding:55px 0}.about .wrap{grid-template-columns:1fr!important;gap:28px!important}.booking{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.brand{font-size:14px}}
     @media(max-width:430px){.links a:nth-child(2){display:none}.services{grid-template-columns:1fr}.hero h1{font-size:46px}.form{padding:19px}}
   
-    /* Identidade visual 2027: editorial feminina, champagne e rosé */
-    :root{--bg:#fbf7f3;--panel:#fffdfa;--gold:#a87958;--rose:#bd7f88;--cream:#352a2b;--muted:#76696a;--line:#eadbd5}
-    body{background:var(--bg);color:var(--cream);font-family:Arial,'Helvetica Neue',sans-serif}
-    .top{background:rgba(251,247,243,.94);border-bottom:1px solid #eadbd5;position:sticky;top:0;z-index:20;backdrop-filter:blur(14px)}
-    .brand{font-family:Georgia,serif;font-size:19px;letter-spacing:1px;color:#49363a}
-    .brand span{color:#ad7780;font:10px Arial,sans-serif;letter-spacing:4px}
-    .links{align-items:center;gap:clamp(10px,2vw,24px);color:#6c5b5e;font:12px Arial,sans-serif}
-    .links a{padding:9px 0;white-space:nowrap}
-    .links a:last-child{border:1px solid #c99a91;border-radius:30px;padding:10px 15px;color:#81545b}
-    .links a:hover{color:#b47780}
-    .hero{min-height:620px;gap:48px;padding:78px 0}
-    .eyebrow{color:#a87958;font-weight:700;letter-spacing:3px}
-    .hero h1{font-family:Georgia,serif;color:#49363a;font-size:clamp(44px,6.2vw,76px);letter-spacing:-1.5px;line-height:1.02}
-    .hero h1 em{color:#b77d86}
-    .hero p,.section-head p,.service p,.about p,.booking-info p{color:#75686a}
-    .hero-art{min-height:490px;border:0;border-radius:220px 220px 18px 18px;background:radial-gradient(ellipse at 50% 35%,#f4dcd7 0,#e8c8c2 35%,#c99e98 72%,#a97876 100%);box-shadow:0 24px 70px #7c55551c}
-    .hero-art:before{width:74%;height:100%;top:8%;left:13%;border:1px solid #fff9}
-    .hero-art:after{width:60%;height:86%;top:16%;left:20%;border:1px solid #fff8}
-    .art-caption{background:linear-gradient(transparent,#49363a99);padding:42px 20px 34px}
-    .art-caption strong{font-family:Georgia,serif;color:#fff;font-size:30px}
-    .art-caption small{color:#fff;letter-spacing:3px}
-    section{padding:86px 0}
-    .section-head h2,.about h2,.booking-info h2{font-family:Georgia,serif;color:#49363a;letter-spacing:-.5px}
-    .section-head h2{font-size:46px}
-    .services{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
-    .service{background:#fffdfa;border:1px solid #eedfda;border-radius:18px;padding:27px;min-height:174px;box-shadow:0 8px 26px #7b56520a;transition:transform .2s ease,box-shadow .2s ease}
-    .service:hover{transform:translateY(-4px);box-shadow:0 16px 34px #7b56521a}
-    .service.featured{border-color:#d8b2aa;background:linear-gradient(145deg,#fff8f5,#f6e8e4)}
-    .service small{color:#b47780;font-weight:700;letter-spacing:2px}
-    .service h3{font-family:Georgia,serif;color:#503b40;font-size:25px}
-    .about{background:#f2e7e2}
-    .about-mark{border:1px solid #c99a91;border-radius:18px;background:linear-gradient(145deg,#fffaf7,#ead4ce);box-shadow:0 18px 40px #6d454510}
-    .about-mark b{font-family:Georgia,serif;color:#9d6a70}
-    .about-mark span{color:#765c60}
-    .booking{gap:50px}
-    .form{background:#fffdfa;border:1px solid #eadbd5;border-radius:20px;padding:32px;box-shadow:0 18px 50px #6d454510}
-    .field label{color:#986b6e;font-weight:700}
-    .field input,.field select,.field textarea{background:#fffaf8;border:1px solid #eadbd5;border-radius:10px;color:#49363a;padding:14px}
-    .field input:focus,.field select:focus,.field textarea:focus{border-color:#bd8790;box-shadow:0 0 0 3px #bd87901c}
-    .btn{border:1px solid #a87579;border-radius:30px;background:linear-gradient(135deg,#b98087,#98666f);color:white;padding:16px 25px;font-weight:700;letter-spacing:.7px;box-shadow:0 8px 20px #9a68701f;transition:transform .2s ease,filter .2s ease}
-    .btn:hover{filter:brightness(1.05);transform:translateY(-2px)}
-    .btn.secondary,.btn.alt{background:transparent;color:#98666f;border-color:#c99a91;box-shadow:none}
-    .notice{color:#786c6d}
-    footer{background:#49363a;color:#f3e7e2;border-top:0}
-    footer a{color:#f1c9c5}
-    @media(max-width:760px){
-      .top{padding:14px 0}
-      .nav{align-items:flex-start;flex-direction:column;gap:12px}
-      .links{width:100%;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:11px}
-      .links a:last-child{padding:8px 11px}
-      .hero{padding:48px 0;gap:30px;min-height:auto}
-      .hero-art{min-height:360px;border-radius:180px 180px 16px 16px}
-      .services{grid-template-columns:repeat(2,minmax(0,1fr))}
-      section{padding:64px 0}
-      .form{padding:23px}
-    }
-    @media(max-width:430px){
-      .links a:nth-child(2){display:inline}
-      .links a{font-size:10px}
-      .links a:last-child{font-size:10px}
-      .services{grid-template-columns:1fr}
-      .hero h1{font-size:46px}
-      .hero-art{min-height:310px}
-      .section-head h2{font-size:39px}
-    }
-
+    /* Identidade visual unificada: preto e dourado */
+    :root{--bg:#100e0d;--panel:#191614;--gold:#d6b46a;--rose:#d6b46a;--cream:#f5eee3;--muted:#b8aca0;--line:#40352c}
+    body{background:var(--bg);color:var(--cream);font-family:Georgia,'Times New Roman',serif}
+    .top{background:rgba(16,14,13,.96);border-bottom:1px solid var(--line)}
+    .brand,.brand span{color:var(--gold)}
+    .links{color:var(--muted)}
+    .links a:last-child{border:1px solid var(--gold);border-radius:30px;padding:10px 15px;color:var(--gold)}
+    .links a:hover{color:var(--gold)}
+    .hero h1,.section-head h2,.about h2,.booking-info h2{color:var(--cream)}
+    .hero h1 em,.eyebrow,.service small{color:var(--gold)}
+    .hero-art{border:1px solid #9d7d493d;border-radius:18px;background:radial-gradient(ellipse at 50% 42%,#75533b 0,#35251f 34%,#191311 70%);box-shadow:none}
+    .hero-art:before{border:1px solid #d6b46a66}
+    .hero-art:after{border:1px solid #d6b46a55}
+    .art-caption{background:linear-gradient(transparent,#100e0ddd)}
+    .art-caption strong{color:var(--gold)}
+    .service,.form{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:none}
+    .service.featured{border-color:var(--gold);background:linear-gradient(145deg,#2a2119,#171311)}
+    .service h3{color:var(--cream)}
+    .about{background:#171311}
+    .about-mark{border:1px solid var(--gold);border-radius:12px;background:var(--panel);box-shadow:none}
+    .about-mark b{color:var(--gold)}
+    .about-mark span{color:var(--muted)}
+    .field label{color:var(--gold)}
+    .field input,.field select,.field textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--cream)}
+    .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px #d6b46a1c}
+    .btn{border:1px solid var(--gold);border-radius:30px;background:var(--gold);color:var(--bg);box-shadow:none}
+    .btn.secondary,.btn.alt{background:transparent;color:var(--gold);border-color:var(--gold);box-shadow:none}
+    .btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+    footer{background:#100e0d;color:var(--muted);border-top:1px solid var(--line)}
+    footer a{color:var(--gold)}
   </style>
 </head>
 <body>
