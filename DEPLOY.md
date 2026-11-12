@@ -11,7 +11,7 @@ O projeto possui site público, painel administrativo, API em Pages Functions, e
 1. Entre no painel da Cloudflare.
 2. Acesse **Workers & Pages > Create application > Pages > Connect to Git**.
 3. Autorize o GitHub e selecione `wchagas73-lang/salao-transformacao-beleza.`.
-4. Escolha a branch `main) como produção.
+4. Escolha a branch `main` como produção.
 5. Configure:
    - Framework preset: `None`
    - Build command: deixe vazio
@@ -53,7 +53,7 @@ Cadastre os valores como **Secrets**, não como variáveis públicas. Não coloq
 1. Salve as configurações.
 2. Faça um novo deploy de Production para aplicar binding e segredos.
 3. Abra o endereço publicado e teste o site público.
-4. Acesse `/admin.html) e entre com a senha definida em `ADMIN_PASSWORD`.
+4. Acesse `/admin.html` e entre com a senha definida em `ADMIN_PASSWORD`.
 5. No painel, configure dias e horários de atendimento, duração de cada serviço e intervalo entre horários.
 6. Faça uma solicitação de teste pelo site e confirme que ela aparece no painel como **solicitada**, sem ser marcada automaticamente como confirmada.
 7. Teste conflito de horário, bloqueio de período, alteração de status e logout.
