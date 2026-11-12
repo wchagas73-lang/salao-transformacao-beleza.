@@ -52,10 +52,22 @@ export async function onRequest({request, env}) {
   if (!env.DB) return json({error:"Banco de dados ainda não configurado."},503);
   if (!sameOrigin(request)) return json({error:"Origem não permitida."},403);
   const url = new URL(request.url), path = url.pathname.replace(/^\/api/,"");
+  if (request.method === "GET" && path.startsWith("/service-images/")) {
+    const id=path.slice("/service-images/".length);
+    if(!/^[a-f0-9-]{20,50}$/i.test(id)) return json({error:"Imagem não encontrada."},404);
+    if(!env.SERVICE_IMAGES) return json({error:"Armazenamento de imagens não configurado."},503);
+    const object=await env.SERVICE_IMAGES.get("services/"+id);
+    if(!object) return new Response(null,{status:404});
+    const headers=new Headers();
+    object.writeHttpMetadata(headers);
+    headers.set("cache-control","public, max-age=3600");
+    headers.set("etag",object.httpEtag);
+    return new Response(object.body,{headers});
+  }
   if (request.method === "GET" && path === "/booking-settings") {
     const row=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='deposit_percent'").first();
     const value=Number(row?.setting_value)||0;
-    const pricesRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='service_prices'").first();let servicePrices=DEFAULT_SERVICE_PRICES;try{if(pricesRow?.setting_value)servicePrices={...DEFAULT_SERVICE_PRICES,...JSON.parse(pricesRow.setting_value)}}catch{};const percentsRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='service_deposit_percents'").first();let servicePercents={};try{servicePercents=JSON.parse(percentsRow?.setting_value||'{}')}catch{};const services=await env.DB.prepare("SELECT id,name FROM services WHERE is_active=1 ORDER BY display_order,name").all();return json({deposit_percent:Number.isInteger(value)&&value>=0&&value<=100?value:0,service_prices:servicePrices,service_deposit_percents:servicePercents,services:services.results||[]});
+    const pricesRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='service_prices'").first();let servicePrices=DEFAULT_SERVICE_PRICES;try{if(pricesRow?.setting_value)servicePrices={...DEFAULT_SERVICE_PRICES,...JSON.parse(pricesRow.setting_value)}}catch{};const percentsRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='service_deposit_percents'").first();let servicePercents={};try{servicePercents=JSON.parse(percentsRow?.setting_value||'{}')}catch{};const services=await env.DB.prepare("SELECT id,name FROM services WHERE is_active=1 ORDER BY display_order,name").all();return json({deposit_percent:Number.isInteger(value)&&value>=0&&value<=100?value:0,service_prices:servicePrices,service_deposit_percents:servicePercents,services:(services.results||[]).map(s=>({...s,image_url:"/api/service-images/"+s.id}))});
   }
   if (request.method === "GET" && path === "/availability") {
     const service=cleanText(url.searchParams.get("service"),50);
@@ -182,6 +194,23 @@ export async function onRequest({request, env}) {
       return json({ok:true});
     }
     
+    if(path.startsWith("/admin/services/") && path.endsWith("/image") && request.method==="POST"){
+      const id=path.split("/")[3];
+      if(!/^[a-f0-9-]{20,50}$/i.test(id))return json({error:"Serviço inválido."},400);
+      if(!env.SERVICE_IMAGES)return json({error:"O armazenamento de imagens ainda não está conectado. Configure o bucket R2 SERVICE_IMAGES no Cloudflare."},503);
+      let body;try{body=await request.json()}catch{return json({error:"Imagem inválida."},400)}
+      const match=typeof body?.data_url==="string"?body.data_url.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/):null;
+      if(!match)return json({error:"Envie uma imagem JPG, PNG ou WebP."},400);
+      const binary=atob(match[2]);if(binary.length>1500000)return json({error:"A imagem ficou maior que 1,5 MB. Escolha uma imagem menor."},413);
+      const service=await env.DB.prepare("SELECT id FROM services WHERE id=?").bind(id).first();if(!service)return json({error:"Serviço não encontrado."},404);
+      const bytes=Uint8Array.from(binary,ch=>ch.charCodeAt(0));
+      await env.SERVICE_IMAGES.put("services/"+id,bytes,{httpMetadata:{contentType:match[1],cacheControl:"public, max-age=3600"}});
+      return json({ok:true,image_url:"/api/service-images/"+id});
+    }
+    if(path.startsWith("/admin/services/") && path.endsWith("/image") && request.method==="DELETE"){
+      const id=path.split("/")[3];if(!env.SERVICE_IMAGES)return json({error:"Armazenamento de imagens não configurado."},503);
+      await env.SERVICE_IMAGES.delete("services/"+id);return json({ok:true});
+    }
     if(path==="/admin/services" && request.method==="POST"){
       let body;try{body=await request.json()}catch{return json({error:"Dados inválidos."},400)}
       const name=cleanText(body?.name,80),duration=Number(body?.duration_minutes)||60;
