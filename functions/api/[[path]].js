@@ -176,12 +176,13 @@ export async function onRequest({request, env}) {
     if (path === "/admin/config" && request.method === "PUT") {
       let body; try { body=await request.json(); } catch { return json({error:"Dados inválidos."},400); }
       if (!body || typeof body!=="object" || Array.isArray(body) || !body.weekly_hours || typeof body.weekly_hours!=="object" || !body.durations || typeof body.durations!=="object") return json({error:"Configuração incompleta."},400);
+      const validClock=(value,allowMidnightEnd=false)=>typeof value==="string" && /^\\d{2}:\\d{2}$/.test(value) && Number(value.slice(3,5))<60 && (Number(value.slice(0,2))<24 || (allowMidnightEnd && value==="24:00"));
       for(let day=0;day<7;day++){
         const h=body.weekly_hours[String(day)];
         if(h===null) continue;
-        if(!h || !/^\\d{2}:\\d{2}$/.test(h.open||"") || !/^\\d{2}:\\d{2}$/.test(h.close||"")) return json({error:"Confira os horários de funcionamento."},400);
+        if(!h || !validClock(h.open) || !validClock(h.close,true)) return json({error:"Confira os horários de funcionamento."},400);
         const minutes=s=>Number(s.slice(0,2))*60+Number(s.slice(3,5));
-        if(minutes(h.open)>=minutes(h.close)||minutes(h.close)>1440) return json({error:"O fechamento precisa ser posterior à abertura."},400);
+        if(minutes(h.open)>=minutes(h.close)) return json({error:"O fechamento precisa ser posterior à abertura."},400);
       }
       const interval=Number(body.slot_interval_minutes);
       if(![15,30,60].includes(interval)) return json({error:"Intervalo entre opções inválido."},400);
