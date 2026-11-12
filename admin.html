@@ -43,7 +43,9 @@ function render(){
   select.value=a.status;
   const save=document.createElement('button');save.className='btn save';save.textContent='Salvar status';
   save.addEventListener('click',async()=>{save.disabled=true;try{await api('/admin/appointments/'+encodeURIComponent(a.id),{method:'PATCH',body:JSON.stringify({status:select.value})});await load()}catch(err){alert(err.message)}finally{save.disabled=false}});
-  actions.append(select,save);el.append(top,title,service,phone,notes,actions);box.append(el);
+  const remove=document.createElement('button');remove.className='btn alt';remove.textContent='Excluir agendamento';
+  remove.addEventListener('click',async()=>{if(!confirm('Excluir permanentemente este agendamento? Esta ação não pode ser desfeita.'))return;remove.disabled=true;try{await api('/admin/appointments/'+encodeURIComponent(a.id),{method:'DELETE'});await load()}catch(err){alert(err.message)}finally{remove.disabled=false}});
+  actions.append(select,save,remove);el.append(top,title,service,phone,notes,actions);box.append(el);
  });
 }
 async function load(){const box=$('appointments');box.innerHTML='<div class="empty">Carregando agenda...</div>';try{const data=await api('/admin/appointments');allAppointments=data.appointments||[];updateStats(allAppointments);render()}catch(err){box.innerHTML='';const message=document.createElement('div');message.className='empty';message.textContent=err.message;box.append(message);if(err.message.includes('autorizado')){$('dashboard').classList.add('hidden');$('login').classList.remove('hidden')}}}
