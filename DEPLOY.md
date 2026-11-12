@@ -10,7 +10,8 @@ O site público continua como demonstração com solicitação via WhatsApp. O p
 - `wrangler.toml`: configuração inicial do binding D1. Substituir o ID de exemplo pelo ID real.
 
 ## Configuração necessária no Cloudflare
-1. Criar um projeto Pages conectado a este repositório. Framework: `None`. Build command: deixar em branco. Build output directory: `.`. Root directory: raiz do repositório.
+1. No Cloudflare, abrir **Workers & Pages > Create application > Pages > Connect to Git**. Autorizar GitHub e selecionar este repositório. Usar `main` como branch de produção. A integração Git é necessária porque o projeto usa Pages Functions.
+2. Configurar Framework preset como `None`, Build command em branco, Build output directory como `.` e Root directory como raiz do repositório.
 2. Criar banco D1 chamado `transformacao-beleza-db`.
 3. Executar `database/schema.sql` no console SQL do D1.
 4. Em Pages > Settings > Functions > D1 database bindings, adicionar binding `DB` apontando para o banco. O nome do binding precisa ser exatamente `DB`.
@@ -27,3 +28,4 @@ O site público continua como demonstração com solicitação via WhatsApp. O p
 - Ainda não há mensagens automáticas de confirmação, lembretes, cancelamento pelo cliente ou sincronização com Google Calendar.
 - Antes de receber clientes reais, adicionar proteção contra abuso/rate limiting, política de privacidade, retenção e backup.
 - Não compartilhar a senha administrativa com clientes nem colocá-la no código-fonte.
+\n## Documentação oficial\n- Cloudflare Pages Git integration: https://developers.cloudflare.com/pages/get-started/git-integration/\n- Cloudflare Pages bindings e secrets: https://developers.cloudflare.com/pages/functions/bindings/\n- Cloudflare Pages build configuration: https://developers.cloudflare.com/pages/configuration/build-configuration/\n
