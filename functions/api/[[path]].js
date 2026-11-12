@@ -110,7 +110,7 @@ export async function onRequest({request, env}) {
     const byId=new Map(serviceRows.map(x=>[x.id,x]));
     const ordered=serviceIds.map(id=>byId.get(id)),duration=ordered.reduce((sum,x)=>sum+(Number(x.duration_minutes)||60),0);
     const primary=ordered[0],serviceNames=ordered.map(x=>x.name),id=crypto.randomUUID();
-    const storedNotes="[[SERVICES:"+JSON.stringify(serviceNames)+"]]"+(notes?"\\n"+notes:"");
+    const storedNotes="[[SERVICES:"+JSON.stringify(serviceNames)+"]]"+(notes?" | Observações: "+notes:"");
     const hoursRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='weekly_hours'").first();
     let endsAt=null;
     if(hoursRow){
@@ -242,7 +242,7 @@ if (path === "/admin/config" && request.method === "GET") {
     }
     if (path === "/admin/appointments" && request.method === "GET") {
       const result=await env.DB.prepare("SELECT a.id,a.customer_name,a.customer_phone,a.starts_at,a.status,a.customer_notes,a.internal_notes,a.created_at,s.name AS service_name FROM appointments a LEFT JOIN services s ON s.id=a.service_id ORDER BY a.starts_at DESC LIMIT 300").all();
-      const appointments=(result.results||[]).map(a=>{const match=String(a.customer_notes||"").match(/^\\[\\[SERVICES:(.*?)\\]\\](?:\\n|$)/);if(match){try{a.service_name=JSON.parse(match[1]).join(", ")}catch{}a.customer_notes=String(a.customer_notes||"").replace(/^\\[\\[SERVICES:.*?\\]\\](?:\\n|$)/,"")}return a});
+      const appointments=(result.results||[]).map(a=>{const raw=String(a.customer_notes||"");if(raw.startsWith("[[SERVICES:")){const end=raw.indexOf("]]");if(end>0){try{a.service_name=JSON.parse(raw.slice(11,end)).join(", ")}catch{}a.customer_notes=raw.slice(end+2).replace(/^ \| Observações: /,"")}}return a});
       return json({appointments});
     }
     if (path.startsWith("/admin/appointments/") && request.method === "DELETE") {
