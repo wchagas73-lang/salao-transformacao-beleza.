@@ -54,7 +54,7 @@
       <form class="form" id="bookingForm"><div class="form-grid">
         <div class="field full"><label for="service">Serviço desejado</label><select id="service" required><option value="">Selecione um serviço</option><option>Mega Hair</option><option>Hidratação</option><option>Progressivas</option><option>Corte</option><option>Escova</option><option>Luzes</option><option>Relaxamento</option></select></div>
         <div class="field"><label for="date">Data desejada</label><input id="date" type="date" required></div>
-        <div class="field"><label for="time">Horário desejado</label><input id="time" type="time" required></div>
+        <div class="field"><label for="time">Horário desejado</label><input id="time" type="time" list="availableSlots" required><datalist id="availableSlots"></datalist><small id="availabilityHint" style="color:var(--muted);font:11px/1.5 Arial,sans-serif">O salão confirmará a disponibilidade do horário solicitado.</small></div>
         <div class="field"><label for="name">Seu nome</label><input id="name" type="text" placeholder="Nome completo" required></div>
         <div class="field"><label for="phone">Seu telefone</label><input id="phone" type="tel" placeholder="(00) 00000-0000" required></div>
         <div class="field full"><label for="details">Observações (opcional)</label><textarea id="details" rows="3" placeholder="Conte um pouco sobre o que deseja..."></textarea></div>
@@ -66,6 +66,21 @@
     document.getElementById('year').textContent=new Date().getFullYear();
     const dateInput=document.getElementById('date');
     const today=new Date();dateInput.min=new Date(today.getTime()-today.getTimezoneOffset()*60000).toISOString().slice(0,10);
+    const serviceInput=document.getElementById('service'), timeInput=document.getElementById('time'), slotsList=document.getElementById('availableSlots'), availabilityHint=document.getElementById('availabilityHint');
+    async function loadAvailableSlots(){
+      slotsList.innerHTML='';
+      if(!serviceInput.value||!dateInput.value){availabilityHint.textContent='Escolha o serviço e a data para consultar os horários.';return}
+      availabilityHint.textContent='Consultando horários...';
+      try{
+        const response=await fetch('/api/availability?service='+encodeURIComponent(serviceInput.value)+'&date='+encodeURIComponent(dateInput.value));
+        const data=await response.json();
+        if(!response.ok) throw new Error(data.error||'Não foi possível consultar a agenda.');
+        if(!data.configured){availabilityHint.textContent='A agenda ainda está sendo configurada. Você pode solicitar um horário, sujeito à confirmação do salão.';return}
+        (data.slots||[]).forEach(slot=>{const option=document.createElement('option');option.value=slot;slotsList.append(option)});
+        availabilityHint.textContent=data.slots?.length?'Horários sugeridos conforme a agenda do salão. O pedido ainda depende de confirmação.':'Não há horários livres nessa data. Tente outra data.';
+      }catch(err){availabilityHint.textContent='Não foi possível consultar a agenda agora. O salão confirmará manualmente.'}
+    }
+    serviceInput.addEventListener('change',loadAvailableSlots);dateInput.addEventListener('change',loadAvailableSlots);
     document.getElementById('bookingForm').addEventListener('submit',async function(e){
       e.preventDefault();
       const v=id=>document.getElementById(id).value.trim();
