@@ -5,7 +5,7 @@
 </style></head><body><header class="head"><div class="wrap"><strong>Transformação e Beleza Hair</strong><span>PAINEL ADMINISTRATIVO • ARCANY DIGITAL</span></div></header>
 <main class="wrap main"><section id="login"><h1>Acesso da proprietária</h1><p class="muted">Área privada para acompanhar as solicitações de agendamento.</p><form class="panel" id="loginForm"><div class="field"><label for="password">Senha administrativa</label><input id="password" type="password" autocomplete="current-password" required></div><button class="btn">Entrar no painel</button><p id="loginError" class="error"></p></form></section>
 <section id="dashboard" class="hidden"><div class="row"><div><h1>Agenda</h1><p class="muted">Solicitações e status dos atendimentos.</p></div><button class="btn alt" id="logout">Sair</button></div><div class="row" style="margin-top:20px"><button class="btn" id="refresh">Atualizar agenda</button><button class="btn alt" id="configToggle">Configurar horários e serviços</button><span class="muted" id="count"></span></div><div id="stats" class="stats"></div><div class="tools"><input id="search" type="search" placeholder="Buscar por cliente, telefone ou serviço" aria-label="Buscar agendamentos"><select id="filter" aria-label="Filtrar por status"><option value="all">Todos os status</option><option value="requested">Solicitados</option><option value="confirmed">Confirmados</option><option value="cancelled">Cancelados</option><option value="completed">Concluídos</option><option value="no_show">Não compareceu</option></select></div><div id="appointments" class="list"></div><p class="muted">Configure o expediente e a duração dos serviços para habilitar a consulta de horários livres. Solicitações recebidas continuam pendentes até a confirmação do salão.</p></section>
-<section id="configPanel" class="panel hidden"><div class="row"><h2 style="font:28px Georgia;font-weight:400;color:#d6b46a">Configurar agenda</h2><button class="btn alt" id="closeConfig">Fechar</button></div><p class="muted">Marque os dias de atendimento e informe abertura e fechamento. Defina também a duração média de cada serviço. Esses dados serão usados para calcular os horários possíveis.</p><h3 style="font:20px Georgia;font-weight:400">Funcionamento semanal</h3><div id="hoursEditor"></div><h3 style="font:20px Georgia;font-weight:400;margin-top:24px">Duração dos serviços (minutos)</h3><div id="durationEditor" class="duration-grid"></div><div class="field"><label for="slotInterval">Intervalo entre horários oferecidos</label><select id="slotInterval"><option value="15">15 minutos</option><option value="30">30 minutos</option><option value="60">1 hora</option></select></div><button class="btn" id="saveConfig">Salvar configuração</button><p id="configMessage" class="muted"></p></section></main>
+<section id="configPanel" class="panel hidden"><div class="row"><h2 style="font:28px Georgia;font-weight:400;color:#d6b46a">Configurar agenda</h2><button class="btn alt" id="closeConfig">Fechar</button></div><p class="muted">Marque os dias de atendimento e informe abertura e fechamento. Defina também a duração média de cada serviço. Esses dados serão usados para calcular os horários possíveis.</p><h3 style="font:20px Georgia;font-weight:400">Funcionamento semanal</h3><div id="hoursEditor"></div><h3 style="font:20px Georgia;font-weight:400;margin-top:24px">Duração dos serviços (minutos)</h3><div id="durationEditor" class="duration-grid"></div><div class="field"><label for="slotInterval">Intervalo entre horários oferecidos</label><select id="slotInterval"><option value="15">15 minutos</option><option value="30">30 minutos</option><option value="60">1 hora</option></select></div><button class="btn" id="saveConfig">Salvar configuração</button><p id="configMessage" class="muted"></p><hr style="border:0;border-top:1px solid #40352c;margin:28px 0"><h3 style="font:20px Georgia;font-weight:400">Bloquear horários ou períodos</h3><p class="muted">Use para folgas, pausas, férias ou compromissos. O bloqueio impede novas solicitações naquele intervalo.</p><form id="blockForm"><div class="duration-grid"><label class="duration-item">Início<input id="blockStart" type="datetime-local" required></label><label class="duration-item">Fim<input id="blockEnd" type="datetime-local" required></label></div><div class="field"><label for="blockReason">Motivo (opcional)</label><input id="blockReason" maxlength="160" placeholder="Ex.: compromisso pessoal"></div><button class="btn">Adicionar bloqueio</button></form><div id="blocksList" class="list"></div></section></main>
 <script>
 const $=id=>document.getElementById(id);
 let allAppointments=[];
@@ -49,7 +49,7 @@ async function load(){const box=$('appointments');box.innerHTML='<div class="emp
 $('refresh').addEventListener('click',load);$('search').addEventListener('input',render);$('filter').addEventListener('change',render);
 const weekdays=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
 async function openConfig(){
- $('configPanel').classList.remove('hidden');$('configMessage').textContent='Carregando configuração...';
+ $('configPanel').classList.remove('hidden');$('configMessage').textContent='Carregando configuração...';loadBlocks();
  try{
   const data=await api('/admin/config');const weekly=data.settings.weekly_hours||{};const hours=$('hoursEditor');hours.innerHTML='';
   weekdays.forEach((day,i)=>{const value=weekly[String(i)];const row=document.createElement('div');row.className='day-row';const name=document.createElement('strong');name.textContent=day;const check=document.createElement('input');check.type='checkbox';check.checked=!!value;check.setAttribute('aria-label',day+' atende');const open=document.createElement('input');open.type='time';open.value=value?.open||'09:00';open.disabled=!check.checked;const close=document.createElement('input');close.type='time';close.value=value?.close||'18:00';close.disabled=!check.checked;check.addEventListener('change',()=>{open.disabled=!check.checked;close.disabled=!check.checked});row.append(name,check,open,close);row.dataset.day=String(i);hours.append(row)});
@@ -58,6 +58,26 @@ async function openConfig(){
  }catch(err){$('configMessage').textContent=err.message}
 }
 $('configToggle').addEventListener('click',openConfig);$('closeConfig').addEventListener('click',()=>$('configPanel').classList.add('hidden'));
+async function loadBlocks(){
+ const box=$('blocksList');box.innerHTML='<div class="empty">Carregando bloqueios...</div>';
+ try{
+  const data=await api('/admin/blocks');box.innerHTML='';
+  if(!data.blocks.length){box.innerHTML='<div class="empty">Nenhum período bloqueado.</div>';return}
+  data.blocks.forEach(block=>{
+   const row=document.createElement('div');row.className='item';
+   const p=document.createElement('p');const start=new Date(block.starts_at),end=new Date(block.ends_at);
+   p.textContent=(Number.isNaN(start.getTime())?block.starts_at:start.toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}))+' até '+(Number.isNaN(end.getTime())?block.ends_at:end.toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}));
+   const reason=document.createElement('p');reason.textContent=block.reason||'Sem motivo informado';
+   const remove=document.createElement('button');remove.className='btn alt';remove.textContent='Liberar período';
+   remove.addEventListener('click',async()=>{if(!confirm('Deseja remover este bloqueio?'))return;try{await api('/admin/blocks/'+encodeURIComponent(block.id),{method:'DELETE'});loadBlocks()}catch(err){alert(err.message)}});
+   row.append(p,reason,remove);box.append(row);
+  });
+ }catch(err){box.textContent=err.message}
+}
+$('blockForm').addEventListener('submit',async e=>{
+ e.preventDefault();const start=$('blockStart').value,end=$('blockEnd').value;
+ try{await api('/admin/blocks',{method:'POST',body:JSON.stringify({starts_at:start+'-03:00',ends_at:end+'-03:00',reason:$('blockReason').value})});$('blockForm').reset();loadBlocks()}catch(err){alert(err.message)}
+});
 $('saveConfig').addEventListener('click',async()=>{
  const weekly={};document.querySelectorAll('.day-row').forEach(row=>{const inputs=row.querySelectorAll('input');weekly[row.dataset.day]=inputs[0].checked?{open:inputs[1].value,close:inputs[2].value}:null});
  const durations={};document.querySelectorAll('[data-service]').forEach(input=>{durations[input.dataset.service]=input.value?Number(input.value):null});
