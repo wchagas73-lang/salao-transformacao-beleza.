@@ -204,6 +204,23 @@ export async function onRequest({request, env}) {
       await env.DB.prepare("INSERT INTO services(id,name,description,duration_minutes,is_active,display_order) VALUES(?,?,?,?,1,?)").bind(id,name,description,duration,Number(order?.next)||1).run();
       return json({ok:true,service:{id,name,duration_minutes:duration,is_active:1}},201);
     }
+    if(path.startsWith("/admin/services/") && request.method==="DELETE"){
+      const id=decodeURIComponent(path.slice("/admin/services/".length));
+      if(!id)return json({error:"Serviço inválido."},400);
+      const current=await env.DB.prepare("SELECT id FROM services WHERE id=?").bind(id).first();
+      if(!current)return json({error:"Serviço não encontrado."},404);
+      const priceRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='service_prices'").first();
+      const depositRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='service_deposit_percents'").first();
+      let prices={},deposits={};try{prices=JSON.parse(priceRow?.setting_value||"{}")}catch{}try{deposits=JSON.parse(depositRow?.setting_value||"{}")}catch{}
+      delete prices[id];delete deposits[id];
+      await env.DB.batch([
+        env.DB.prepare("UPDATE appointments SET service_id=NULL WHERE service_id=?").bind(id),
+        env.DB.prepare("DELETE FROM services WHERE id=?").bind(id),
+        env.DB.prepare("INSERT INTO salon_settings(setting_key,setting_value,updated_at) VALUES('service_prices',?,CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO UPDATE SET setting_value=excluded.setting_value,updated_at=CURRENT_TIMESTAMP").bind(JSON.stringify(prices)),
+        env.DB.prepare("INSERT INTO salon_settings(setting_key,setting_value,updated_at) VALUES('service_deposit_percents',?,CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO UPDATE SET setting_value=excluded.setting_value,updated_at=CURRENT_TIMESTAMP").bind(JSON.stringify(deposits))
+      ]);
+      return json({ok:true,message:"Serviço excluído."});
+    }
     if(path.startsWith("/admin/services/") && request.method==="PATCH"){
       const id=path.split("/").pop();let body;try{body=await request.json()}catch{return json({error:"Dados inválidos."},400)}
       const current=await env.DB.prepare("SELECT id FROM services WHERE id=?").bind(id).first();if(!current)return json({error:"Serviço não encontrado. Atualize a página e tente novamente."},404);
