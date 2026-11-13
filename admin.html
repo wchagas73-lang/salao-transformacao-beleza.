@@ -189,9 +189,7 @@ async function openConfig(){
     'luzes':'Iluminação dos cabelos com mechas para criar profundidade e realçar o visual.',
     'relaxamento':'Procedimento para suavizar a curvatura dos fios e ajudar no controle do volume.'
    };
-   const descriptionText=document.createElement('small');descriptionText.style.cssText='display:block;color:#c4b8a6;line-height:1.55;margin:4px 0 10px';
-   const descriptionKey=String(service.name||'').trim().toLocaleLowerCase('pt-BR');
-   descriptionText.textContent=service.description||existingDescriptions[descriptionKey]||'Descrição não cadastrada.';
+   const descriptionText=document.createElement('textarea');descriptionText.rows=2;descriptionText.maxLength=500;descriptionText.value=service.description||existingDescriptions[String(service.name||'').trim().toLocaleLowerCase('pt-BR')]||'';descriptionText.placeholder='Descrição do serviço';descriptionText.dataset.serviceDescription=service.id;descriptionText.style.cssText='display:block;width:100%;box-sizing:border-box;background:#100e0d;border:1px solid #40352c;color:#f5eee3;padding:10px;margin:4px 0 10px';
    const input=document.createElement('input');input.type='number';input.min='0';input.max='100000';input.step='0.01';input.inputMode='decimal';input.dataset.priceService=service.id;
    input.value=String(Number(data.settings.service_prices?.[service.id]??defaults[service.name]??0));
    const percentLabel=document.createElement('span');percentLabel.textContent='Sinal deste serviço (%) • 0 = sem sinal';
@@ -248,6 +246,7 @@ $('saveConfig').addEventListener('click',async()=>{
  const durationInputs=[...document.querySelectorAll('[data-service]')];
  const priceInputs=[...document.querySelectorAll('[data-price-service]')];
  const percentInputs=[...document.querySelectorAll('[data-deposit-service]')];
+ const descriptionInputs=[...document.querySelectorAll('[data-service-description]')];
  const activeInputs=[...document.querySelectorAll('[data-service-active]')];
  const unit=$('durationUnit').value;
  $('saveConfig').disabled=true;$('configMessage').textContent='Salvando alterações dos serviços...';
@@ -257,12 +256,14 @@ $('saveConfig').addEventListener('click',async()=>{
    const durationInput=durationInputs.find(x=>x.dataset.service===id);
    const priceInput=priceInputs.find(x=>x.dataset.priceService===id);
    const percentInput=percentInputs.find(x=>x.dataset.depositService===id);
+   const descriptionInput=descriptionInputs.find(x=>x.dataset.serviceDescription===id);
    const activeInput=activeInputs.find(x=>x.dataset.serviceActive===id);
    const rawDuration=Number(durationInput?.value);
    const duration=Math.round(unit==='hours'?rawDuration*60:rawDuration);
    if(!Number.isInteger(duration)||duration<1||duration>720)throw new Error('Confira a duração de '+input.value+'. Use de 1 a 720 minutos.');
    await api('/admin/services/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify({
     name:input.value,
+    description:descriptionInput?.value||'',
     is_active:!!activeInput?.checked,
     duration_minutes:duration,
     price:Number(priceInput?.value),
