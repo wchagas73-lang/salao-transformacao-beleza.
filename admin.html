@@ -181,7 +181,7 @@ async function openConfig(){
    const card=document.createElement('div');card.className='duration-item';card.style.cssText='display:grid;gap:9px;padding:14px;border:1px solid #40352c;border-radius:12px';
    const title=document.createElement('strong');title.textContent=service.name;
    const nameInput=document.createElement('input');nameInput.type='text';nameInput.maxLength=80;nameInput.value=service.name;nameInput.placeholder='Nome do serviço';nameInput.dataset.serviceName=service.id;
-   const description=document.createElement('textarea');description.rows=2;description.maxLength=500;description.value=service.description||'';description.placeholder='Descrição do serviço';description.dataset.serviceDescription=service.id;
+   const description=document.createElement('textarea');description.rows=2;description.maxLength=500;description.value=service.description||'';description.placeholder='Ex.: o que está incluído, detalhes do procedimento e orientações para a cliente.';description.dataset.serviceDescription=service.id;
    const priceLabel=document.createElement('label');priceLabel.textContent='Preço (R$)';
    const price=document.createElement('input');price.type='number';price.min='0';price.max='100000';price.step='0.01';price.inputMode='decimal';price.dataset.priceService=service.id;price.value=String(Number(data.settings.service_prices?.[service.id]??defaults[service.name]??0));priceLabel.append(price);
    const depositLabel=document.createElement('label');depositLabel.textContent='Sinal (%)';
