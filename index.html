@@ -287,7 +287,7 @@
         const data=await response.json();if(!response.ok)throw new Error(data.error||'Não foi possível consultar a agenda.');
         if(!data.configured){slotsList.innerHTML='<option value="">Agenda ainda não configurada</option>';availabilityHint.textContent='A agenda ainda está sendo configurada. Tente novamente mais tarde.';return}
         currentAvailability=data;slotsList.innerHTML='<option value="">Selecione um horário</option>';
-        (data.options||[]).forEach(item=>{const option=document.createElement('option');option.value=item.time;option.textContent=item.available?item.time:item.time+' • indisponível';option.disabled=!item.available;if(!item.available)option.style.color='#777';slotsList.append(option)});
+        (data.options||[]).forEach(item=>{const option=document.createElement('option');option.value=item.time;option.textContent=item.available?item.time:item.time+' • '+(item.reason||'indisponível');option.disabled=!item.available;if(!item.available)option.style.color='#777';slotsList.append(option)});
         availabilityHint.textContent='Todos os horários de funcionamento aparecem na lista. Os horários ocupados ou fora da duração do serviço ficam desabilitados.';
       }catch(err){slotsList.innerHTML='<option value="">Não foi possível carregar os horários</option>';availabilityHint.textContent=err.message||'Não foi possível consultar a agenda agora.'}
     }
