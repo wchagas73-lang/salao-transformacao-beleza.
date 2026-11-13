@@ -124,6 +124,8 @@ function render(){
   select.value=a.status;
   const save=document.createElement('button');save.className='btn save';save.textContent='Salvar status';
   save.addEventListener('click',async()=>{save.disabled=true;try{await api('/admin/appointments/'+encodeURIComponent(a.id),{method:'PATCH',body:JSON.stringify({status:select.value,internal_notes:internalNotes.value})});await load()}catch(err){alert(err.message)}finally{save.disabled=false}});
+  const saveNotes=document.createElement('button');saveNotes.className='btn alt';saveNotes.textContent='Salvar anotações';
+  saveNotes.addEventListener('click',async()=>{saveNotes.disabled=true;try{await api('/admin/appointments/'+encodeURIComponent(a.id),{method:'PATCH',body:JSON.stringify({status:a.status,internal_notes:internalNotes.value})});await load()}catch(err){alert(err.message)}finally{saveNotes.disabled=false}});
   const remove=document.createElement('button');remove.className='btn alt';remove.textContent='Excluir agendamento';
   remove.addEventListener('click',async()=>{if(!confirm('Excluir permanentemente este agendamento? Esta ação não pode ser desfeita.'))return;remove.disabled=true;try{await api('/admin/appointments/'+encodeURIComponent(a.id),{method:'DELETE'});await load()}catch(err){alert(err.message)}finally{remove.disabled=false}});
   const accept=document.createElement('button');accept.className='btn';accept.textContent='Aceitar agendamento';accept.disabled=a.status==='confirmed';accept.addEventListener('click',async()=>{accept.disabled=true;try{await api('/admin/appointments/'+encodeURIComponent(a.id),{method:'PATCH',body:JSON.stringify({status:'confirmed'})});await load()}catch(err){alert(err.message)}finally{accept.disabled=false}});
@@ -138,7 +140,7 @@ function render(){
   detail.append(itemList);const obs=document.createElement('p');obs.textContent='Observações: '+(a.customer_notes||'Nenhuma observação informada');detail.append(obs);
   const created=document.createElement('p');created.textContent='Solicitação recebida em: '+(a.created_at?new Date(a.created_at+'Z').toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}):'Não informado');detail.append(created);
   view.addEventListener('click',()=>{detail.hidden=!detail.hidden;view.textContent=detail.hidden?'👁️ Visualizar agendamento':'Ocultar detalhes'});
-  actions.append(view,select,save,accept,refuse);
+  actions.append(view,select,save,saveNotes,accept,refuse);
   if(a.status==='confirmed'){const complete=document.createElement('button');complete.className='btn';complete.textContent='Marcar como concluído';complete.addEventListener('click',async()=>{if(!confirm('Confirma que este atendimento foi realizado?'))return;complete.disabled=true;try{await api('/admin/appointments/'+encodeURIComponent(a.id),{method:'PATCH',body:JSON.stringify({status:'completed'})});await load()}catch(err){alert(err.message)}finally{complete.disabled=false}});actions.append(complete)}
   actions.append(remove);el.append(top,title,service,phone,notes,internalLabel,actions,detail);box.append(el);
  });
