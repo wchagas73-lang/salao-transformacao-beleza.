@@ -79,26 +79,22 @@ export async function onRequest({request, env}) {
     const interval=30;
     const dayStart=date+"T00:00:00-03:00",nextDay=new Date(Date.UTC(year,month-1,day+1)).toISOString().slice(0,10),dayEnd=nextDay+"T00:00:00-03:00";
     const busy=await env.DB.prepare("SELECT starts_at,ends_at FROM appointments WHERE status IN ('requested','confirmed') AND starts_at < ? AND (ends_at > ? OR (ends_at IS NULL AND starts_at >= ?))").bind(dayEnd,dayStart,dayStart).all();
-    const blocked=await env.DB.prepare("SELECT starts_at,ends_at,reason FROM blocked_periods WHERE starts_at < ? AND ends_at > ? ORDER BY starts_at").bind(dayEnd,dayStart).all();
-    const blockedPeriods=(blocked.results||[]).map(x=>({starts_at:x.starts_at,ends_at:x.ends_at,reason:x.reason||""}));
     const toRanges=rows=>(rows||[]).map(x=>[Date.parse(x.starts_at),x.ends_at?Date.parse(x.ends_at):Date.parse(x.starts_at)+1]).filter(x=>Number.isFinite(x[0])&&Number.isFinite(x[1]));
-    const busyRanges=toRanges(busy.results),blockedRanges=toRanges(blocked.results);
+    const busyRanges=toRanges(busy.results);
     const slots=[],options=[];
     for(let m=open;m<=close;m+=interval){
       const hh=String(Math.floor(m/60)).padStart(2,"0"),mm=String(m%60).padStart(2,"0"),label=hh+":"+mm,start=Date.parse(date+"T"+label+":00-03:00"),end=start+duration*60000;
       const overlapsPause=pauseStart!==null&&pauseEnd!==null&&m<pauseEnd&&m+duration>pauseStart;
       const overlapsBusy=busyRanges.some(([a,b])=>start<b&&end>a);
-      const overlapsBlocked=blockedRanges.some(([a,b])=>start<b&&end>a);
       let reason="";
       if(start<=Date.now())reason="horário já passou";
       else if(m+duration>close)reason="a duração do serviço ultrapassa o fechamento";
       else if(overlapsPause)reason="pausa do salão";
       else if(overlapsBusy)reason="horário reservado por agendamento";
-      else if(overlapsBlocked)reason="período bloqueado pelo salão";
       const available=!reason;
       options.push({time:label,available,reason});if(available)slots.push(label);
     }
-    return json({configured:true,slots,options,duration_minutes:duration,blocked_periods:blockedPeriods,active_appointments_found:(busy.results||[]).length});
+    return json({configured:true,slots,options,duration_minutes:duration,active_appointments_found:(busy.results||[]).length});
   }
   if (request.method === "POST" && path === "/request") {
     let body;try{body=await request.json()}catch{return json({error:"Dados inválidos."},400)}
@@ -141,9 +137,7 @@ export async function onRequest({request, env}) {
       const pauseStart=/^\d{2}:\d{2}$/.test(hours.break_start||"")?toMin(hours.break_start):null,pauseEnd=/^\d{2}:\d{2}$/.test(hours.break_end||"")?toMin(hours.break_end):null;
       if(startMin<toMin(hours.open)||startMin+duration>toMin(hours.close)||(startMin-toMin(hours.open))%interval!==0)return json({error:"Esse horário está fora da agenda configurada para a duração total dos serviços."},409);
       if(pauseStart!==null&&pauseEnd!==null&&startMin<pauseEnd&&startMin+duration>pauseStart)return json({error:"Esse horário coincide com a pausa do salão. Escolha outro horário."},409);
-      const blocked=await env.DB.prepare("SELECT reason FROM blocked_periods WHERE starts_at < ? AND ends_at > ? ORDER BY starts_at LIMIT 1").bind(endsAt,startsAt).first();
-      if(blocked)return json({error:"Este horário está bloqueado"+(blocked.reason?": "+blocked.reason:"")+". Escolha outro horário."},409);
-      const inserted=await env.DB.prepare("INSERT INTO appointments (id,customer_name,customer_phone,service_id,starts_at,ends_at,status,customer_notes) SELECT ?,?,?,?,?,?,'requested',? WHERE NOT EXISTS (SELECT 1 FROM appointments WHERE status IN ('requested','confirmed') AND ((starts_at < ? AND ends_at > ?) OR (ends_at IS NULL AND starts_at = ?))) AND NOT EXISTS (SELECT 1 FROM blocked_periods WHERE starts_at < ? AND ends_at > ?)").bind(id,name,phone,primary.id,startsAt,endsAt,storedNotes,endsAt,startsAt,startsAt,endsAt,startsAt).run();
+      const inserted=await env.DB.prepare("INSERT INTO appointments (id,customer_name,customer_phone,service_id,starts_at,ends_at,status,customer_notes) SELECT ?,?,?,?,?,?,'requested',? WHERE NOT EXISTS (SELECT 1 FROM appointments WHERE status IN ('requested','confirmed') AND ((starts_at < ? AND ends_at > ?) OR (ends_at IS NULL AND starts_at = ?)))").bind(id,name,phone,primary.id,startsAt,endsAt,storedNotes,endsAt,startsAt,startsAt).run();
       if(!inserted.meta?.changes)return json({error:"Este horário acabou de ficar indisponível. Escolha outro horário."},409);
     }
     return json({ok:true,id,services:serviceNames,service_appointments:serviceItems,duration_minutes:duration,message:"Solicitação recebida. O salão ainda precisa confirmar o horário."},201);
