@@ -218,6 +218,14 @@ export async function onRequest({request, env}) {
       await env.DB.batch([...updates,...settingsWrites]);return json({ok:true});
     }
 if (path === "/admin/config" && request.method === "GET") {
+      const initialized=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='duration_zero_setup_v1'").first();
+      if(!initialized){
+        await env.DB.batch([
+          env.DB.prepare("UPDATE services SET duration_minutes=0"),
+          env.DB.prepare("INSERT INTO salon_settings(setting_key,setting_value,updated_at) VALUES('slot_interval_minutes','1',CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO UPDATE SET setting_value='1',updated_at=CURRENT_TIMESTAMP"),
+          env.DB.prepare("INSERT INTO salon_settings(setting_key,setting_value,updated_at) VALUES('duration_zero_setup_v1','1',CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO UPDATE SET setting_value='1',updated_at=CURRENT_TIMESTAMP")
+        ]);
+      }
       const [services,settings]=await Promise.all([
         env.DB.prepare("SELECT id,name,description,duration_minutes,is_active FROM services ORDER BY display_order").all(),
         env.DB.prepare("SELECT setting_key,setting_value FROM salon_settings").all()
