@@ -163,6 +163,23 @@ export async function onRequest({request, env}) {
   }
   if (path.startsWith("/admin")) {
     if (!(await requireAdmin(request,env))) return json({error:"Acesso não autorizado."},401);
+    if (path === "/admin/reset-test-data" && request.method === "POST") {
+      let body; try { body=await request.json(); } catch { return json({error:"Confirmação inválida."},400); }
+      if (!body || typeof body !== "object" || body.confirmation !== "LIMPAR AGENDA") return json({error:"Digite exatamente LIMPAR AGENDA para confirmar a limpeza."},400);
+      const supplied=typeof body.password === "string" ? body.password.slice(0,200) : "";
+      if (!env.ADMIN_PASSWORD || supplied !== env.ADMIN_PASSWORD) return json({error:"Senha administrativa incorreta."},401);
+      const results=await env.DB.batch([
+        env.DB.prepare("DELETE FROM appointments"),
+        env.DB.prepare("DELETE FROM blocked_periods"),
+        env.DB.prepare("DELETE FROM booking_request_attempts")
+      ]);
+      const deleted={
+        appointments:Number(results[0]?.meta?.changes)||0,
+        blocked_periods:Number(results[1]?.meta?.changes)||0,
+        request_attempts:Number(results[2]?.meta?.changes)||0
+      };
+      return json({ok:true,deleted,message:"Agenda de testes limpa. Serviços e configurações foram preservados."});
+    }
     if (path === "/admin/logout" && request.method === "POST") return json({ok:true},200,{"set-cookie":COOKIE+"=; HttpOnly; Secure; SameSite=Strict; Path=/api/admin; Max-Age=0"});
     if (path === "/admin/blocks" && request.method === "GET") {
       const result=await env.DB.prepare("SELECT id,starts_at,ends_at,reason,created_at FROM blocked_periods ORDER BY starts_at LIMIT 200").all();
