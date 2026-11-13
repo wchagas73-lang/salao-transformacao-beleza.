@@ -215,7 +215,7 @@ export async function onRequest({request, env}) {
       return json({ok:true,message:"Serviço removido da lista e marcado como indisponível."});
     }
     if(path.startsWith("/admin/services/") && request.method==="PATCH"){
-      const id=path.split("/").pop();let body;try{body=await request.json()}catch{return json({error:"Dados inválidos."},400)}
+      let id;try{id=decodeURIComponent(path.slice("/admin/services/".length).replace(/\/$/,""))}catch{return json({error:"Identificador do serviço inválido."},400)}let body;try{body=await request.json()}catch{return json({error:"Dados inválidos."},400)}
       const current=await env.DB.prepare("SELECT id FROM services WHERE id=?").bind(id).first();if(!current)return json({error:"Serviço não encontrado. Atualize a página e tente novamente."},404);
       const updates=[],settingsWrites=[];
       if(body.name!==undefined){const name=cleanText(body.name,80);if(name.length<2)return json({error:"Nome inválido."},400);const duplicate=await env.DB.prepare("SELECT id FROM services WHERE lower(name)=lower(?) AND id<>? AND is_active=1").bind(name,id).first();if(duplicate)return json({error:"Já existe outro serviço com esse nome."},409);updates.push(env.DB.prepare("UPDATE services SET name=? WHERE id=?").bind(name,id))}
