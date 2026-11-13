@@ -277,8 +277,11 @@ if (path === "/admin/config" && request.method === "GET") {
       const id=path.split("/").pop(); let body; try { body=await request.json(); } catch { return json({error:"Dados inválidos."},400); }
       const allowed=new Set(["requested","confirmed","cancelled","completed","no_show"]);
       if (!allowed.has(body.status)) return json({error:"Status inválido."},400);
+      const current=await env.DB.prepare("SELECT internal_notes FROM appointments WHERE id=?").bind(id).first();
+      if(!current)return json({error:"Agendamento não encontrado."},404);
+      const savedNotes=body.internal_notes===undefined?String(current.internal_notes||""):cleanText(body.internal_notes,500);
       const result=await env.DB.prepare("UPDATE appointments SET status=?, internal_notes=?, updated_at=CURRENT_TIMESTAMP WHERE id=?")
-        .bind(body.status,cleanText(body.internal_notes,500),id).run();
+        .bind(body.status,savedNotes,id).run();
       if (!result.meta?.changes) return json({error:"Agendamento não encontrado."},404);
       return json({ok:true});
     }
