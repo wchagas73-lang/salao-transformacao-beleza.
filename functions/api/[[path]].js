@@ -115,7 +115,7 @@ export async function onRequest({request, env}) {
     const rawDuration=ordered.reduce((sum,x)=>sum+Number(x.duration_minutes),0);
     const duration=Math.ceil(rawDuration/30)*30;
     const primary=ordered[0],serviceNames=ordered.map(x=>x.name),id=crypto.randomUUID();
-    const serviceItems=ordered.map(service=>{const itemDuration=Number(service.duration_minutes),start=Date.parse(startsAt),end=start+itemDuration*60000;return {name:service.name,time,time:time,starts_at:startsAt,ends_at:new Date(end+10800000).toISOString().slice(0,19)+"-03:00",duration_minutes:itemDuration}});
+    const serviceItems=ordered.map(service=>{const itemDuration=Number(service.duration_minutes),start=Date.parse(startsAt),end=start+itemDuration*60000;return {name:service.name,time,starts_at:startsAt,ends_at:new Date(end+10800000).toISOString().slice(0,19)+"-03:00",duration_minutes:itemDuration}});
     const storedNotes="[[BOOKING_ITEMS:"+JSON.stringify(serviceItems)+"]]"+(notes?" | Observações: "+notes:"");
     const hoursRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='weekly_hours'").first();
     const defaultWeekly={"0":null,"1":{open:"08:00",close:"20:00"},"2":{open:"08:00",close:"20:00"},"3":{open:"08:00",close:"20:00"},"4":{open:"08:00",close:"20:00"},"5":{open:"08:00",close:"20:00"},"6":{open:"08:00",close:"20:00"}};
