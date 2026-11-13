@@ -86,8 +86,14 @@ export async function onRequest({request, env}) {
     for(let m=open;m<=close;m+=interval){
       const hh=String(Math.floor(m/60)).padStart(2,"0"),mm=String(m%60).padStart(2,"0"),label=hh+":"+mm,start=Date.parse(date+"T"+label+":00-03:00"),end=start+duration*60000;
       const overlapsPause=pauseStart!==null&&pauseEnd!==null&&m<pauseEnd&&m+duration>pauseStart;
-      const available=start>Date.now()&&m+duration<=close&&!overlapsPause&&!busyRanges.some(([a,b])=>start<b&&end>a);
-      options.push({time:label,available});if(available)slots.push(label);
+      const overlapsBusy=busyRanges.some(([a,b])=>start<b&&end>a);
+      let reason="";
+      if(start<=Date.now())reason="horário já passou";
+      else if(m+duration>close)reason="a duração do serviço ultrapassa o fechamento";
+      else if(overlapsPause)reason="pausa do salão";
+      else if(overlapsBusy)reason="agendamento ou período reservado";
+      const available=!reason;
+      options.push({time:label,available,reason});if(available)slots.push(label);
     }
     return json({configured:true,slots,options,duration_minutes:duration,blocked_periods:blockedPeriods});
   }
