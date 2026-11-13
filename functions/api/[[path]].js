@@ -119,7 +119,9 @@ export async function onRequest({request, env}) {
     const byId=new Map(serviceRows.map(x=>[x.id,x]));
     const ordered=serviceIds.map(id=>byId.get(id)),duration=ordered.reduce((sum,x)=>sum+(Number(x.duration_minutes)||60),0);
     const primary=ordered[0],serviceNames=ordered.map(x=>x.name),id=crypto.randomUUID();
-    const storedNotes="[[SERVICES:"+JSON.stringify(serviceNames)+"]]"+(notes?" | Observações: "+notes:"");
+    let serviceCursor=Date.parse(startsAt);
+    const serviceItems=ordered.map(service=>{const itemDuration=Number(service.duration_minutes)||60,start=serviceCursor,end=start+itemDuration*60000;serviceCursor=end;return {name:service.name,time:new Date(start+10800000).toISOString().slice(11,16),starts_at:new Date(start+10800000).toISOString().slice(0,19)+"-03:00",ends_at:new Date(end+10800000).toISOString().slice(0,19)+"-03:00",duration_minutes:itemDuration}});
+    const storedNotes="[[BOOKING_ITEMS:"+JSON.stringify(serviceItems)+"]]"+(notes?" | Observações: "+notes:"");
     const hoursRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='weekly_hours'").first();
     const defaultWeekly={"0":null,"1":{open:"08:00",close:"20:00"},"2":{open:"08:00",close:"20:00"},"3":{open:"08:00",close:"20:00"},"4":{open:"08:00",close:"20:00"},"5":{open:"08:00",close:"20:00"},"6":{open:"08:00",close:"20:00"}};
     let weekly=defaultWeekly;try{if(hoursRow?.setting_value)weekly=JSON.parse(hoursRow.setting_value)}catch{weekly=defaultWeekly}
@@ -141,7 +143,7 @@ export async function onRequest({request, env}) {
       const inserted=await env.DB.prepare("INSERT INTO appointments (id,customer_name,customer_phone,service_id,starts_at,ends_at,status,customer_notes) SELECT ?,?,?,?,?,?,'requested',? WHERE NOT EXISTS (SELECT 1 FROM appointments WHERE status IN ('requested','confirmed') AND ((starts_at < ? AND ends_at > ?) OR (ends_at IS NULL AND starts_at = ?))) AND NOT EXISTS (SELECT 1 FROM blocked_periods WHERE starts_at < ? AND ends_at > ?)").bind(id,name,phone,primary.id,startsAt,endsAt,storedNotes,endsAt,startsAt,startsAt,endsAt,startsAt).run();
       if(!inserted.meta?.changes)return json({error:"Este horário acabou de ficar indisponível. Escolha outro horário."},409);
     }
-    return json({ok:true,id,services:serviceNames,duration_minutes:duration,message:"Solicitação recebida. O salão ainda precisa confirmar o horário."},201);
+    return json({ok:true,id,services:serviceNames,service_appointments:serviceItems,duration_minutes:duration,message:"Solicitação recebida. O salão ainda precisa confirmar o horário."},201);
   }
   if (path === "/admin/login" && request.method === "POST") {
     let body; try { body=await request.json(); } catch { return json({error:"Dados inválidos."},400); }
@@ -260,8 +262,8 @@ if (path === "/admin/config" && request.method === "GET") {
       return json({ok:true,message:"Configuração da agenda salva."});
     }
     if (path === "/admin/appointments" && request.method === "GET") {
-      const result=await env.DB.prepare("SELECT a.id,a.customer_name,a.customer_phone,a.starts_at,a.status,a.customer_notes,a.internal_notes,a.created_at,s.name AS service_name FROM appointments a LEFT JOIN services s ON s.id=a.service_id ORDER BY a.starts_at DESC LIMIT 300").all();
-      const appointments=(result.results||[]).map(a=>{const raw=String(a.customer_notes||"");if(raw.startsWith("[[SERVICES:")){const end=raw.indexOf("]]");if(end>0){try{a.service_name=JSON.parse(raw.slice(11,end)).join(", ")}catch{}a.customer_notes=raw.slice(end+2).replace(/^ \| Observações: /,"")}}return a});
+      const result=await env.DB.prepare("SELECT a.id,a.customer_name,a.customer_phone,a.starts_at,a.ends_at,a.status,a.customer_notes,a.internal_notes,a.created_at,s.name AS service_name FROM appointments a LEFT JOIN services s ON s.id=a.service_id ORDER BY a.starts_at DESC LIMIT 300").all();
+      const appointments=(result.results||[]).map(a=>{const raw=String(a.customer_notes||""),marker="[[BOOKING_ITEMS:",at=raw.indexOf("]]");if(raw.startsWith(marker)&&at>marker.length){try{a.service_items=JSON.parse(raw.slice(marker.length,at));a.service_name=a.service_items.map(x=>x.name).join(", ")}catch{a.service_items=[]}a.customer_notes=raw.slice(at+2).replace(/^ \| Observações: /,"")}else if(raw.startsWith("[[SERVICES:")){const end=raw.indexOf("]]");if(end>0){try{a.service_name=JSON.parse(raw.slice(11,end)).join(", ")}catch{}a.customer_notes=raw.slice(end+2).replace(/^ \| Observações: /,"");a.service_items=JSON.parse(raw.slice(11,end)).map(name=>({name,time:a.starts_at.slice(11,16)}))}}else a.service_items=[{name:a.service_name||"Serviço",time:a.starts_at.slice(11,16)}];return a});
       return json({appointments});
     }
     if (path.startsWith("/admin/appointments/") && request.method === "DELETE") {
