@@ -72,7 +72,7 @@ body{background:radial-gradient(ellipse at 50% -20%,#241a0e 0,#0b0a09 55%);color
 <div id="adminTabs" class="admin-tabs hidden" role="tablist" aria-label="Seções do painel"><button type="button" class="admin-tab active" data-tab="appointmentsTab" role="tab" aria-selected="true">Agendamentos</button><button type="button" class="admin-tab" data-tab="servicesTab" role="tab" aria-selected="false">Serviços</button><button type="button" class="admin-tab" data-tab="scheduleTab" role="tab" aria-selected="false">Horários</button></div><section id="dashboard" class="hidden"><div id="appointmentsTab"><div class="row"><div><h1>Agendamentos</h1><p class="muted">Solicitações e status dos atendimentos.</p></div></div><div class="row" style="margin-top:20px"><button class="btn" id="refresh">Atualizar agenda</button><span class="muted" id="count"></span></div><div id="stats" class="stats"></div><div class="appointment-filters" role="tablist" aria-label="Agendamentos por situação"><button type="button" class="appointment-filter active" data-status="requested">Pendentes <span id="tabCount-requested">0</span></button><button type="button" class="appointment-filter" data-status="confirmed">Confirmados <span id="tabCount-confirmed">0</span></button><button type="button" class="appointment-filter" data-status="cancelled">Cancelados <span id="tabCount-cancelled">0</span></button><button type="button" class="appointment-filter" data-status="completed">Concluídos <span id="tabCount-completed">0</span></button><button type="button" class="appointment-filter" data-status="all">Todos <span id="tabCount-all">0</span></button></div><div class="tools"><input id="search" type="search" placeholder="Buscar por cliente, telefone ou serviço" aria-label="Buscar agendamentos"></div><div id="appointments" class="list"></div><p class="muted">Solicitações recebidas continuam pendentes até a confirmação do salão.</p></div></section>
 <section id="configPanel" class="panel hidden"><div class="row"><h2 style="font:28px Georgia;font-weight:400;color:#d6b46a">Configurações</h2><button class="btn alt" id="closeConfig">Voltar aos agendamentos</button></div><div id="scheduleTab" class="hidden"><h3 style="font:20px Georgia;font-weight:400">Horários de funcionamento</h3><p class="muted">Defina os dias e o expediente de cada um. Se houver almoço ou pausa fixa, informe o início e o fim. Esse intervalo ficará indisponível para os clientes.</p><div id="hoursEditor"></div><p class="muted">Para compromissos ou reservas em datas específicas, use a seção de períodos reservados abaixo.</p></div><div id="servicesTab" class="hidden"><div class="row" style="margin-top:24px"><h3 style="font:20px Georgia;font-weight:400">Duração dos serviços</h3><select id="durationUnit" aria-label="Unidade da duração"><option value="hours">Horas</option><option value="minutes">Minutos</option></select></div><p class="muted" id="durationHint">Informe a duração em horas. Todos começam com 1 hora e você pode ajustar cada serviço.</p><div id="durationEditor" class="duration-grid"></div>
 <h3 style="font:20px Georgia;font-weight:400;margin-top:28px">Cadastrar novo serviço</h3><p class="muted">Adicione qualquer procedimento que o salão ofereça. Depois ajuste preço, duração e disponibilidade.</p><form id="newServiceForm" class="duration-grid"><label class="duration-item">Nome do serviço<input id="newServiceName" maxlength="80" required placeholder="Ex.: Manutenção de Mega Hair"></label><label class="duration-item">Descrição do serviço<textarea id="newServiceDescription" maxlength="500" rows="3" placeholder="Explique o que é realizado neste serviço"></textarea></label><label class="duration-item">Duração inicial em minutos<input id="newServiceDuration" type="number" min="1" max="720" value="60" required></label><button class="btn" type="submit">Cadastrar serviço</button></form><p id="newServiceMessage" class="muted"></p>
-<h3 style="font:20px Georgia;font-weight:400;margin-top:28px">Serviços cadastrados, preços e disponibilidade</h3><p class="muted">Edite nomes, preços, duração e porcentagem de sinal. Desmarque a disponibilidade para pausar um serviço sem apagar o cadastro.</p><div id="priceEditor" class="duration-grid"></div><div style="margin-top:18px"><button class="btn" id="saveConfig" type="button">Salvar alterações</button></div><p id="configMessage" class="muted" role="status" aria-live="polite"></p></div><div id="scheduleSettings" class="hidden"><h3 style="font:20px Georgia;font-weight:400">Configuração dos horários</h3><div class="field"><label for="slotInterval">Intervalo entre horários oferecidos</label><input id="slotInterval" type="number" min="1" max="720" step="1" value="60" inputmode="numeric" placeholder="Ex.: 20" aria-describedby="slotIntervalHelp"><small id="slotIntervalHelp" class="muted">Digite o intervalo em minutos. Aceita de 1 a 720 minutos.</small></div><button class="btn" id="saveScheduleConfig" type="button">Salvar horários da agenda</button><p class="muted">Os horários definidos serão aplicados aos próximos agendamentos.</p><hr style="border:0;border-top:1px solid #40352c;margin:28px 0"><h3 style="font:20px Georgia;font-weight:400">Períodos reservados</h3><p class="muted">Reserve um horário ou período específico para almoço excepcional, compromisso, folga ou outro motivo. Os clientes não poderão agendar nesse intervalo.</p><form id="blockForm"><div class="duration-grid"><label class="duration-item">Início<input id="blockStart" type="datetime-local" required></label><label class="duration-item">Fim<input id="blockEnd" type="datetime-local" required></label></div><div class="field"><label for="blockReason">Motivo (opcional)</label><input id="blockReason" maxlength="160" placeholder="Ex.: compromisso pessoal"></div><button class="btn">Adicionar bloqueio</button></form><div id="blocksList" class="list"></div></div></section></main>
+<h3 style="font:20px Georgia;font-weight:400;margin-top:28px">Serviços cadastrados, preços e disponibilidade</h3><p class="muted">Edite nomes, preços, duração e porcentagem de sinal. Desmarque a disponibilidade para pausar um serviço sem apagar o cadastro.</p><div id="priceEditor" class="duration-grid"></div><p id="configMessage" class="muted" role="status" aria-live="polite"></p></div><div id="scheduleSettings" class="hidden"><h3 style="font:20px Georgia;font-weight:400">Configuração dos horários</h3><div class="field"><label for="slotInterval">Intervalo entre horários oferecidos</label><input id="slotInterval" type="number" min="1" max="720" step="1" value="60" inputmode="numeric" placeholder="Ex.: 20" aria-describedby="slotIntervalHelp"><small id="slotIntervalHelp" class="muted">Digite o intervalo em minutos. Aceita de 1 a 720 minutos.</small></div><button class="btn" id="saveScheduleConfig" type="button">Salvar horários da agenda</button><p class="muted">Os horários definidos serão aplicados aos próximos agendamentos.</p><hr style="border:0;border-top:1px solid #40352c;margin:28px 0"><h3 style="font:20px Georgia;font-weight:400">Períodos reservados</h3><p class="muted">Reserve um horário ou período específico para almoço excepcional, compromisso, folga ou outro motivo. Os clientes não poderão agendar nesse intervalo.</p><form id="blockForm"><div class="duration-grid"><label class="duration-item">Início<input id="blockStart" type="datetime-local" required></label><label class="duration-item">Fim<input id="blockEnd" type="datetime-local" required></label></div><div class="field"><label for="blockReason">Motivo (opcional)</label><input id="blockReason" maxlength="160" placeholder="Ex.: compromisso pessoal"></div><button class="btn">Adicionar bloqueio</button></form><div id="blocksList" class="list"></div></div></section></main>
 <script>
 const $=id=>document.getElementById(id);
 let allAppointments=[];let activeAppointmentStatus='requested';
@@ -122,10 +122,9 @@ function render(){
   const select=document.createElement('select');select.className='status-select status-select-'+a.status;select.setAttribute('aria-label','Status do agendamento');select.addEventListener('change',()=>{select.className='status-select status-select-'+select.value});
   Object.entries(statusLabels).forEach(([value,label])=>{const option=document.createElement('option');option.value=value;option.textContent=label;select.append(option)});
   select.value=a.status;
-  const save=document.createElement('button');save.className='btn save';save.textContent='Salvar status';
-  save.addEventListener('click',async()=>{save.disabled=true;try{await api('/admin/appointments/'+encodeURIComponent(a.id),{method:'PATCH',body:JSON.stringify({status:select.value,internal_notes:internalNotes.value})});await load()}catch(err){alert(err.message)}finally{save.disabled=false}});
-  const saveNotes=document.createElement('button');saveNotes.className='btn alt';saveNotes.textContent='Salvar anotações';
-  saveNotes.addEventListener('click',async()=>{saveNotes.disabled=true;try{await api('/admin/appointments/'+encodeURIComponent(a.id),{method:'PATCH',body:JSON.stringify({status:a.status,internal_notes:internalNotes.value})});await load()}catch(err){alert(err.message)}finally{saveNotes.disabled=false}});
+  let noteSaveTimer=null;
+  select.addEventListener('change',async()=>{select.disabled=true;try{await api('/admin/appointments/'+encodeURIComponent(a.id),{method:'PATCH',body:JSON.stringify({status:select.value})});await load()}catch(err){alert('Não foi possível atualizar o status: '+err.message);select.value=a.status}finally{select.disabled=false}});
+  internalNotes.addEventListener('input',()=>{clearTimeout(noteSaveTimer);noteSaveTimer=setTimeout(async()=>{internalNotes.disabled=true;try{await api('/admin/appointments/'+encodeURIComponent(a.id),{method:'PATCH',body:JSON.stringify({internal_notes:internalNotes.value})})}catch(err){alert('Não foi possível salvar a anotação: '+err.message)}finally{internalNotes.disabled=false}},650)});
   const remove=document.createElement('button');remove.className='btn alt';remove.textContent='Excluir agendamento';
   remove.addEventListener('click',async()=>{if(!confirm('Excluir permanentemente este agendamento? Esta ação não pode ser desfeita.'))return;remove.disabled=true;try{await api('/admin/appointments/'+encodeURIComponent(a.id),{method:'DELETE'});await load()}catch(err){alert(err.message)}finally{remove.disabled=false}});
   const accept=document.createElement('button');accept.className='btn';accept.textContent='Aceitar agendamento';accept.disabled=a.status==='confirmed';accept.addEventListener('click',async()=>{accept.disabled=true;try{await api('/admin/appointments/'+encodeURIComponent(a.id),{method:'PATCH',body:JSON.stringify({status:'confirmed'})});await load()}catch(err){alert(err.message)}finally{accept.disabled=false}});
@@ -140,7 +139,7 @@ function render(){
   detail.append(itemList);const obs=document.createElement('p');obs.textContent='Observações: '+(a.customer_notes||'Nenhuma observação informada');detail.append(obs);
   const created=document.createElement('p');created.textContent='Solicitação recebida em: '+(a.created_at?new Date(a.created_at+'Z').toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}):'Não informado');detail.append(created);
   view.addEventListener('click',()=>{detail.hidden=!detail.hidden;view.textContent=detail.hidden?'👁️ Visualizar agendamento':'Ocultar detalhes'});
-  actions.append(view,select,save,saveNotes,accept,refuse);
+  actions.append(view,select,accept,refuse);
   if(a.status==='confirmed'){const complete=document.createElement('button');complete.className='btn';complete.textContent='Marcar como concluído';complete.addEventListener('click',async()=>{if(!confirm('Confirma que este atendimento foi realizado?'))return;complete.disabled=true;try{await api('/admin/appointments/'+encodeURIComponent(a.id),{method:'PATCH',body:JSON.stringify({status:'completed'})});await load()}catch(err){alert(err.message)}finally{complete.disabled=false}});actions.append(complete)}
   actions.append(remove);el.append(top,title,service,phone,notes,internalLabel,actions,detail);box.append(el);
  });
@@ -243,51 +242,41 @@ $('blockForm').addEventListener('submit',async e=>{
  e.preventDefault();const start=$('blockStart').value,end=$('blockEnd').value;
  try{await api('/admin/blocks',{method:'POST',body:JSON.stringify({starts_at:start+'-03:00',ends_at:end+'-03:00',reason:$('blockReason').value})});$('blockForm').reset();loadBlocks()}catch(err){alert(err.message)}
 });
-$('saveConfig').addEventListener('click',async()=>{
- const nameInputs=[...document.querySelectorAll('[data-service-name]')];
- const durationInputs=[...document.querySelectorAll('[data-service]')];
- const priceInputs=[...document.querySelectorAll('[data-price-service]')];
- const percentInputs=[...document.querySelectorAll('[data-deposit-service]')];
- const descriptionInputs=[...document.querySelectorAll('[data-service-description]')];
- const activeInputs=[...document.querySelectorAll('[data-service-active]')];
- const unit=$('durationUnit').value;
- $('saveConfig').disabled=true;$('configMessage').textContent='Salvando alterações dos serviços...';
+// Salvamento automático dos campos dos serviços. O cadastro continua com seu botão próprio.
+async function saveServiceAutomatically(id){
+ const name=document.querySelector('[data-service-name="'+id+'"]'),duration=document.querySelector('[data-service="'+id+'"]'),price=document.querySelector('[data-price-service="'+id+'"]'),percent=document.querySelector('[data-deposit-service="'+id+'"]'),description=document.querySelector('[data-service-description="'+id+'"]'),active=document.querySelector('[data-service-active="'+id+'"]');
+ if(!name||!duration)return;
+ const minutes=Math.round($('durationUnit').value==='hours'?Number(duration.value)*60:Number(duration.value));
+ if(!Number.isInteger(minutes)||minutes<1||minutes>720){$('configMessage').textContent='Duração inválida. Use de 1 a 720 minutos.';return}
+ $('configMessage').textContent='Salvando automaticamente...';
  try{
-  for(const input of nameInputs){
-   const id=input.dataset.serviceName;
-   const durationInput=durationInputs.find(x=>x.dataset.service===id);
-   const priceInput=priceInputs.find(x=>x.dataset.priceService===id);
-   const percentInput=percentInputs.find(x=>x.dataset.depositService===id);
-   const descriptionInput=descriptionInputs.find(x=>x.dataset.serviceDescription===id);
-   const activeInput=activeInputs.find(x=>x.dataset.serviceActive===id);
-   const rawDuration=Number(durationInput?.value);
-   const duration=Math.round(unit==='hours'?rawDuration*60:rawDuration);
-   if(!Number.isInteger(duration)||duration<1||duration>720)throw new Error('Confira a duração de '+input.value+'. Use de 1 a 720 minutos.');
-   await api('/admin/services/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify({
-    name:input.value,
-    description:descriptionInput?.value||'',
-    is_active:!!activeInput?.checked,
-    duration_minutes:duration,
-    price:Number(priceInput?.value),
-    deposit_percent:percentInput?.value===''?0:Number(percentInput?.value)
-   })});
-  }
-  $('configMessage').textContent='Alterações dos serviços salvas com sucesso.';
- }catch(err){$('configMessage').textContent=err.message}
- finally{$('saveConfig').disabled=false}
-});
-$('saveScheduleConfig').addEventListener('click',async()=>{
+  await api('/admin/services/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify({name:name.value,description:description?.value||'',is_active:!!active?.checked,duration_minutes:minutes,price:Number(price?.value)||0,deposit_percent:percent?.value===''?0:Number(percent?.value)||0})});
+  duration.dataset.durationMinutes=String(minutes);
+  $('configMessage').textContent='Alterações salvas automaticamente.';
+ }catch(err){$('configMessage').textContent='Não foi possível salvar: '+err.message}
+}
+const serviceSaveTimers={};
+function queueServiceSave(id){clearTimeout(serviceSaveTimers[id]);serviceSaveTimers[id]=setTimeout(()=>saveServiceAutomatically(id),500)}
+['priceEditor','durationEditor'].forEach(containerId=>$(containerId).addEventListener('change',event=>{
+ const f=event.target,id=f.dataset.serviceName||f.dataset.service||f.dataset.priceService||f.dataset.depositService||f.dataset.serviceDescription||f.dataset.serviceActive;
+ if(id)queueServiceSave(id);
+}));
+// Horários e intervalo são gravados automaticamente após cada alteração.
+let scheduleSaveTimer=null;
+async function saveScheduleAutomatically(){
  const weekly={};
  document.querySelectorAll('.day-row').forEach(row=>{const inputs=row.querySelectorAll('input');weekly[row.dataset.day]=inputs[0].checked?{open:inputs[1].value,close:inputs[2].value,break_start:inputs[3].value||null,break_end:inputs[4].value||null}:null});
  const slotInterval=Number($('slotInterval').value);
  if(!Number.isInteger(slotInterval)||slotInterval<1||slotInterval>720){$('configMessage').textContent='Digite um intervalo entre 1 e 720 minutos.';return}
- $('saveScheduleConfig').disabled=true;$('configMessage').textContent='Salvando horários da agenda...';
- try{
-  await api('/admin/config',{method:'PUT',body:JSON.stringify({weekly_hours:weekly,slot_interval_minutes:slotInterval})});
-  $('configMessage').textContent='Horários da agenda salvos com sucesso.';
- }catch(err){$('configMessage').textContent=err.message}
- finally{$('saveScheduleConfig').disabled=false}
-});
+ $('configMessage').textContent='Salvando horários automaticamente...';
+ try{await api('/admin/config',{method:'PUT',body:JSON.stringify({weekly_hours:weekly,slot_interval_minutes:slotInterval})});$('configMessage').textContent='Horários salvos automaticamente.'}
+ catch(err){$('configMessage').textContent='Falha ao salvar horários: '+err.message}
+}
+function queueScheduleSave(){clearTimeout(scheduleSaveTimer);scheduleSaveTimer=setTimeout(saveScheduleAutomatically,700)}
+$('hoursEditor').addEventListener('change',queueScheduleSave);
+$('hoursEditor').addEventListener('input',queueScheduleSave);
+$('slotInterval').addEventListener('change',queueScheduleSave);
+$('slotInterval').addEventListener('input',queueScheduleSave);
 async function initializeSession(){try{await api('/admin/appointments');$('login').classList.add('hidden');$('adminTabs').classList.remove('hidden');$('dashboard').classList.remove('hidden');showAdminTab('appointmentsTab');load()}catch(err){$('dashboard').classList.add('hidden');$('login').classList.remove('hidden')}}
 initializeSession();
 // Mantém a agenda sincronizada automaticamente, sem exigir que a proprietária atualize a página.
