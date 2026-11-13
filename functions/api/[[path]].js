@@ -158,8 +158,24 @@ export async function onRequest({request, env}) {
         }
       },401);
     }
+    let agendaReset=null;
+    const resetFlag=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='demo_agenda_initial_cleanup_v1'").first();
+    if(!resetFlag){
+      const cleanup=await env.DB.batch([
+        env.DB.prepare("DELETE FROM appointments"),
+        env.DB.prepare("DELETE FROM blocked_periods"),
+        env.DB.prepare("DELETE FROM booking_request_attempts"),
+        env.DB.prepare("INSERT INTO salon_settings(setting_key,setting_value,updated_at) VALUES('demo_agenda_initial_cleanup_v1','done',CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO NOTHING")
+      ]);
+      agendaReset={
+        performed:true,
+        appointments:Number(cleanup[0]?.meta?.changes)||0,
+        blocked_periods:Number(cleanup[1]?.meta?.changes)||0,
+        request_attempts:Number(cleanup[2]?.meta?.changes)||0
+      };
+    }
     const token=await makeSession(env.SESSION_SECRET);
-    return json({ok:true},200,{ "set-cookie":COOKIE+"="+token+"; HttpOnly; Secure; SameSite=Strict; Path=/api/admin; Max-Age="+SESSION_SECONDS });
+    return json({ok:true,agenda_reset:agendaReset},200,{ "set-cookie":COOKIE+"="+token+"; HttpOnly; Secure; SameSite=Strict; Path=/api/admin; Max-Age="+SESSION_SECONDS });
   }
   if (path.startsWith("/admin")) {
     if (!(await requireAdmin(request,env))) return json({error:"Acesso não autorizado."},401);
@@ -168,17 +184,14 @@ export async function onRequest({request, env}) {
       if (!body || typeof body !== "object" || body.confirmation !== "LIMPAR AGENDA") return json({error:"Digite exatamente LIMPAR AGENDA para confirmar a limpeza."},400);
       const supplied=typeof body.password === "string" ? body.password.slice(0,200) : "";
       if (!env.ADMIN_PASSWORD || supplied !== env.ADMIN_PASSWORD) return json({error:"Senha administrativa incorreta."},401);
-      const results=await env.DB.batch([
-        env.DB.prepare("DELETE FROM appointments"),
-        env.DB.prepare("DELETE FROM blocked_periods"),
-        env.DB.prepare("DELETE FROM booking_request_attempts")
-      ]);
-      const deleted={
-        appointments:Number(results[0]?.meta?.changes)||0,
-        blocked_periods:Number(results[1]?.meta?.changes)||0,
-        request_attempts:Number(results[2]?.meta?.changes)||0
-      };
-      return json({ok:true,deleted,message:"Agenda de testes limpa. Serviços e configurações foram preservados."});
+      const appointments=await env.DB.prepare("DELETE FROM appointments").run();
+      const blocks=await env.DB.prepare("DELETE FROM blocked_periods").run();
+      let attempts=0;
+      try { const result=await env.DB.prepare("DELETE FROM booking_request_attempts").run(); attempts=Number(result.meta?.changes)||0; } catch {}
+      const remaining=await env.DB.prepare("SELECT COUNT(*) AS total FROM appointments WHERE status IN ('requested','confirmed')").first();
+      const remainingBlocks=await env.DB.prepare("SELECT COUNT(*) AS total FROM blocked_periods").first();
+      if(Number(remaining?.total)||Number(remainingBlocks?.total))return json({error:"A limpeza não foi concluída. Ainda existem registros na agenda.",remaining_appointments:Number(remaining?.total)||0,remaining_blocks:Number(remainingBlocks?.total)||0},500);
+      return json({ok:true,deleted:{appointments:Number(appointments.meta?.changes)||0,blocked_periods:Number(blocks.meta?.changes)||0,request_attempts:attempts},message:"Agenda de testes limpa. Serviços e configurações foram preservados."});
     }
     if (path === "/admin/logout" && request.method === "POST") return json({ok:true},200,{"set-cookie":COOKIE+"=; HttpOnly; Secure; SameSite=Strict; Path=/api/admin; Max-Age=0"});
     if (path === "/admin/blocks" && request.method === "GET") {
