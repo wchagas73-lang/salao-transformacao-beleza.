@@ -66,7 +66,8 @@ export async function onRequest({request, env}) {
     if((rows.results||[]).length!==serviceIds.length || (rows.results||[]).some(x=>!x.is_active)) return json({error:"Um dos serviços não está disponível."},400);
     const configuredRows=rows.results||[];
     if(configuredRows.some(x=>!Number.isInteger(Number(x.duration_minutes))||Number(x.duration_minutes)<1))return json({configured:true,duration_configured:false,slots:[],options:[],duration_minutes:0,message:'A duração deste serviço ainda não foi configurada pelo salão.'});
-    const duration=configuredRows.reduce((sum,x)=>sum+Number(x.duration_minutes),0);
+    const rawDuration=configuredRows.reduce((sum,x)=>sum+Number(x.duration_minutes),0);
+    const duration=Math.ceil(rawDuration/30)*30;
     const hoursRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='weekly_hours'").first();
     const defaultWeekly={"0":null,"1":{open:"08:00",close:"20:00"},"2":{open:"08:00",close:"20:00"},"3":{open:"08:00",close:"20:00"},"4":{open:"08:00",close:"20:00"},"5":{open:"08:00",close:"20:00"},"6":{open:"08:00",close:"20:00"}};
     let weekly=defaultWeekly; try { if(hoursRow?.setting_value) weekly=JSON.parse(hoursRow.setting_value); } catch { weekly=defaultWeekly; }
@@ -78,7 +79,7 @@ export async function onRequest({request, env}) {
     const toMin=s=>Number(s.slice(0,2))*60+Number(s.slice(3,5)),open=toMin(hours.open),close=toMin(hours.close),pauseStart=/^\d{2}:\d{2}$/.test(hours.break_start||"")?toMin(hours.break_start):null,pauseEnd=/^\d{2}:\d{2}$/.test(hours.break_end||"")?toMin(hours.break_end):null;
     const interval=30;
     const dayStart=date+"T00:00:00-03:00",nextDay=new Date(Date.UTC(year,month-1,day+1)).toISOString().slice(0,10),dayEnd=nextDay+"T00:00:00-03:00";
-    const busy=await env.DB.prepare("SELECT starts_at,ends_at FROM appointments WHERE status IN ('requested','confirmed') AND starts_at < ? AND (ends_at > ? OR (ends_at IS NULL AND starts_at >= ?))").bind(dayEnd,dayStart,dayStart).all();
+    const busy=await env.DB.prepare("SELECT starts_at,ends_at FROM appointments WHERE status='confirmed' AND starts_at < ? AND (ends_at > ? OR (ends_at IS NULL AND starts_at >= ?))").bind(dayEnd,dayStart,dayStart).all();
     const toRanges=rows=>(rows||[]).map(x=>[Date.parse(x.starts_at),x.ends_at?Date.parse(x.ends_at):Date.parse(x.starts_at)+1]).filter(x=>Number.isFinite(x[0])&&Number.isFinite(x[1]));
     const busyRanges=toRanges(busy.results);
     const slots=[],options=[];
@@ -118,7 +119,8 @@ export async function onRequest({request, env}) {
     const byId=new Map(serviceRows.map(x=>[x.id,x]));
     const ordered=serviceIds.map(id=>byId.get(id));
     if(ordered.some(x=>!Number.isInteger(Number(x.duration_minutes))||Number(x.duration_minutes)<1))return json({error:'Um dos serviços ainda não tem duração configurada. O salão precisa definir a duração antes de liberar o agendamento.'},409);
-    const duration=ordered.reduce((sum,x)=>sum+Number(x.duration_minutes),0);
+    const rawDuration=ordered.reduce((sum,x)=>sum+Number(x.duration_minutes),0);
+    const duration=Math.ceil(rawDuration/30)*30;
     const primary=ordered[0],serviceNames=ordered.map(x=>x.name),id=crypto.randomUUID();
     let serviceCursor=Date.parse(startsAt);
     const serviceItems=ordered.map(service=>{const itemDuration=Number(service.duration_minutes),start=serviceCursor,end=start+itemDuration*60000;serviceCursor=end;return {name:service.name,time:new Date(start+10800000).toISOString().slice(11,16),starts_at:new Date(start+10800000).toISOString().slice(0,19)+"-03:00",ends_at:new Date(end+10800000).toISOString().slice(0,19)+"-03:00",duration_minutes:itemDuration}});
@@ -137,7 +139,7 @@ export async function onRequest({request, env}) {
       const pauseStart=/^\d{2}:\d{2}$/.test(hours.break_start||"")?toMin(hours.break_start):null,pauseEnd=/^\d{2}:\d{2}$/.test(hours.break_end||"")?toMin(hours.break_end):null;
       if(startMin<toMin(hours.open)||startMin+duration>toMin(hours.close)||(startMin-toMin(hours.open))%interval!==0)return json({error:"Esse horário está fora da agenda configurada para a duração total dos serviços."},409);
       if(pauseStart!==null&&pauseEnd!==null&&startMin<pauseEnd&&startMin+duration>pauseStart)return json({error:"Esse horário coincide com a pausa do salão. Escolha outro horário."},409);
-      const inserted=await env.DB.prepare("INSERT INTO appointments (id,customer_name,customer_phone,service_id,starts_at,ends_at,status,customer_notes) SELECT ?,?,?,?,?,?,'requested',? WHERE NOT EXISTS (SELECT 1 FROM appointments WHERE status IN ('requested','confirmed') AND ((starts_at < ? AND ends_at > ?) OR (ends_at IS NULL AND starts_at = ?)))").bind(id,name,phone,primary.id,startsAt,endsAt,storedNotes,endsAt,startsAt,startsAt).run();
+      const inserted=await env.DB.prepare("INSERT INTO appointments (id,customer_name,customer_phone,service_id,starts_at,ends_at,status,customer_notes) SELECT ?,?,?,?,?,?,'requested',? WHERE NOT EXISTS (SELECT 1 FROM appointments WHERE status='confirmed' AND ((starts_at < ? AND ends_at > ?) OR (ends_at IS NULL AND starts_at = ?)))").bind(id,name,phone,primary.id,startsAt,endsAt,storedNotes,endsAt,startsAt,startsAt).run();
       if(!inserted.meta?.changes)return json({error:"Este horário acabou de ficar indisponível. Escolha outro horário."},409);
     }
     return json({ok:true,id,services:serviceNames,service_appointments:serviceItems,duration_minutes:duration,message:"Solicitação recebida. O salão ainda precisa confirmar o horário."},201);
@@ -324,6 +326,14 @@ if (path === "/admin/config" && request.method === "GET") {
       const id=path.split("/").pop(); let body; try { body=await request.json(); } catch { return json({error:"Dados inválidos."},400); }
       const allowed=new Set(["requested","confirmed","cancelled","completed","no_show"]);
       if (!allowed.has(body.status)) return json({error:"Status inválido."},400);
+      if(body.status==="confirmed"){
+        const slot=await env.DB.prepare("SELECT starts_at,ends_at FROM appointments WHERE id=?").bind(id).first();
+        if(!slot)return json({error:"Agendamento não encontrado."},404);
+        if(slot.ends_at){
+          const conflict=await env.DB.prepare("SELECT COUNT(*) AS total FROM appointments WHERE id<>? AND status='confirmed' AND starts_at < ? AND ends_at > ?").bind(id,slot.ends_at,slot.starts_at).first();
+          if(Number(conflict?.total)>0)return json({error:"Este horário já foi confirmado para outro atendimento. Atualize a agenda antes de confirmar."},409);
+        }
+      }
       let current,hasInternalNotes=true;
       try{current=await env.DB.prepare("SELECT internal_notes FROM appointments WHERE id=?").bind(id).first()}
       catch{hasInternalNotes=false;current=await env.DB.prepare("SELECT customer_notes FROM appointments WHERE id=?").bind(id).first()}
