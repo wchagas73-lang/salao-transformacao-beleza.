@@ -262,8 +262,10 @@ if (path === "/admin/config" && request.method === "GET") {
       return json({ok:true,message:"Configuração da agenda salva."});
     }
     if (path === "/admin/appointments" && request.method === "GET") {
-      const result=await env.DB.prepare("SELECT a.id,a.customer_name,a.customer_phone,a.starts_at,a.ends_at,a.status,a.customer_notes,a.internal_notes,a.created_at,s.name AS service_name FROM appointments a LEFT JOIN services s ON s.id=a.service_id ORDER BY a.starts_at DESC LIMIT 300").all();
-      const appointments=(result.results||[]).map(a=>{const raw=String(a.customer_notes||""),marker="[[BOOKING_ITEMS:",at=raw.indexOf("]]");if(raw.startsWith(marker)&&at>marker.length){try{a.service_items=JSON.parse(raw.slice(marker.length,at));a.service_name=a.service_items.map(x=>x.name).join(", ")}catch{a.service_items=[]}a.customer_notes=raw.slice(at+2).replace(/^ \| Observações: /,"")}else if(raw.startsWith("[[SERVICES:")){const end=raw.indexOf("]]");if(end>0){try{a.service_name=JSON.parse(raw.slice(11,end)).join(", ")}catch{}a.customer_notes=raw.slice(end+2).replace(/^ \| Observações: /,"");a.service_items=JSON.parse(raw.slice(11,end)).map(name=>({name,time:a.starts_at.slice(11,16)}))}}else a.service_items=[{name:a.service_name||"Serviço",time:a.starts_at.slice(11,16)}];return a});
+      let result,hasInternalNotes=true;
+      try{result=await env.DB.prepare("SELECT a.id,a.customer_name,a.customer_phone,a.starts_at,a.ends_at,a.status,a.customer_notes,a.internal_notes,a.created_at,s.name AS service_name FROM appointments a LEFT JOIN services s ON s.id=a.service_id ORDER BY a.starts_at DESC LIMIT 300").all()}
+      catch{hasInternalNotes=false;result=await env.DB.prepare("SELECT a.id,a.customer_name,a.customer_phone,a.starts_at,a.ends_at,a.status,a.customer_notes,a.created_at,s.name AS service_name FROM appointments a LEFT JOIN services s ON s.id=a.service_id ORDER BY a.starts_at DESC LIMIT 300").all()}
+      const appointments=(result.results||[]).map(a=>{let raw=String(a.customer_notes||"");if(!hasInternalNotes){const im=raw.indexOf("[[INTERNAL_NOTES:");if(im===0){const ie=raw.indexOf("]]");if(ie>0){try{a.internal_notes=decodeURIComponent(raw.slice(17,ie))}catch{a.internal_notes=""}raw=raw.slice(ie+2).replace(/^ \\| /,"");}}}const marker="[[BOOKING_ITEMS:",at=raw.indexOf("]]");if(raw.startsWith(marker)&&at>marker.length){try{a.service_items=JSON.parse(raw.slice(marker.length,at));a.service_name=a.service_items.map(x=>x.name).join(", ")}catch{a.service_items=[]}a.customer_notes=raw.slice(at+2).replace(/^ \| Observações: /,"")}else if(raw.startsWith("[[SERVICES:")){const end=raw.indexOf("]]");if(end>0){try{a.service_name=JSON.parse(raw.slice(11,end)).join(", ")}catch{}a.customer_notes=raw.slice(end+2).replace(/^ \| Observações: /,"");a.service_items=JSON.parse(raw.slice(11,end)).map(name=>({name,time:a.starts_at.slice(11,16)}))}}else a.service_items=[{name:a.service_name||"Serviço",time:a.starts_at.slice(11,16)}];return a});
       return json({appointments});
     }
     if (path.startsWith("/admin/appointments/") && request.method === "DELETE") {
@@ -277,12 +279,24 @@ if (path === "/admin/config" && request.method === "GET") {
       const id=path.split("/").pop(); let body; try { body=await request.json(); } catch { return json({error:"Dados inválidos."},400); }
       const allowed=new Set(["requested","confirmed","cancelled","completed","no_show"]);
       if (!allowed.has(body.status)) return json({error:"Status inválido."},400);
-      const current=await env.DB.prepare("SELECT internal_notes FROM appointments WHERE id=?").bind(id).first();
+      let current,hasInternalNotes=true;
+      try{current=await env.DB.prepare("SELECT internal_notes FROM appointments WHERE id=?").bind(id).first()}
+      catch{hasInternalNotes=false;current=await env.DB.prepare("SELECT customer_notes FROM appointments WHERE id=?").bind(id).first()}
       if(!current)return json({error:"Agendamento não encontrado."},404);
-      const savedNotes=body.internal_notes===undefined?String(current.internal_notes||""):cleanText(body.internal_notes,500);
-      const result=await env.DB.prepare("UPDATE appointments SET status=?, internal_notes=?, updated_at=CURRENT_TIMESTAMP WHERE id=?")
-        .bind(body.status,savedNotes,id).run();
-      if (!result.meta?.changes) return json({error:"Agendamento não encontrado."},404);
+      if(hasInternalNotes){
+        const savedNotes=body.internal_notes===undefined?String(current.internal_notes||""):cleanText(body.internal_notes,500);
+        const result=await env.DB.prepare("UPDATE appointments SET status=?, internal_notes=?, updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(body.status||"requested",savedNotes,id).run();
+        if(!result.meta?.changes)return json({error:"Agendamento não encontrado."},404);
+      }else{
+        let customerNotes=String(current.customer_notes||"");
+        if(body.internal_notes!==undefined){
+          const marker="[[INTERNAL_NOTES:",end=customerNotes.indexOf("]]");
+          if(customerNotes.startsWith(marker)&&end>0)customerNotes=customerNotes.slice(end+2).replace(/^ \\| /,"");
+          customerNotes=marker+encodeURIComponent(cleanText(body.internal_notes,500))+"]]"+(customerNotes?" | "+customerNotes:"");
+        }
+        const result=await env.DB.prepare("UPDATE appointments SET status=?, customer_notes=?, updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(body.status||"requested",customerNotes,id).run();
+        if(!result.meta?.changes)return json({error:"Agendamento não encontrado."},404);
+      }
       return json({ok:true});
     }
   }
