@@ -115,13 +115,15 @@ function render(){
   const title=document.createElement('h3');title.textContent=a.customer_name;
   const service=document.createElement('p');service.textContent='Serviço: '+(a.service_name||'Não identificado');
   const phone=document.createElement('p');phone.textContent='Telefone: '+a.customer_phone;
-  const notes=document.createElement('p');notes.textContent=a.customer_notes||'Sem observações.';
+  const notes=document.createElement('p');notes.textContent=a.customer_notes||'Sem observações da cliente.';
+  const internalLabel=document.createElement('label');internalLabel.className='duration-item';internalLabel.style.marginTop='10px';internalLabel.textContent='Anotações internas / interações';
+  const internalNotes=document.createElement('textarea');internalNotes.rows=2;internalNotes.maxLength=500;internalNotes.placeholder='Registre informações do atendimento para a equipe...';internalNotes.value=a.internal_notes||'';internalNotes.style.cssText='width:100%;box-sizing:border-box;background:#100e0d;border:1px solid #40352c;color:#f5eee3;padding:10px;margin-top:6px';internalLabel.append(internalNotes);
   const actions=document.createElement('div');actions.className='row';actions.style.marginTop='12px';
   const select=document.createElement('select');select.className='status-select status-select-'+a.status;select.setAttribute('aria-label','Status do agendamento');select.addEventListener('change',()=>{select.className='status-select status-select-'+select.value});
   Object.entries(statusLabels).forEach(([value,label])=>{const option=document.createElement('option');option.value=value;option.textContent=label;select.append(option)});
   select.value=a.status;
   const save=document.createElement('button');save.className='btn save';save.textContent='Salvar status';
-  save.addEventListener('click',async()=>{save.disabled=true;try{await api('/admin/appointments/'+encodeURIComponent(a.id),{method:'PATCH',body:JSON.stringify({status:select.value})});await load()}catch(err){alert(err.message)}finally{save.disabled=false}});
+  save.addEventListener('click',async()=>{save.disabled=true;try{await api('/admin/appointments/'+encodeURIComponent(a.id),{method:'PATCH',body:JSON.stringify({status:select.value,internal_notes:internalNotes.value})});await load()}catch(err){alert(err.message)}finally{save.disabled=false}});
   const remove=document.createElement('button');remove.className='btn alt';remove.textContent='Excluir agendamento';
   remove.addEventListener('click',async()=>{if(!confirm('Excluir permanentemente este agendamento? Esta ação não pode ser desfeita.'))return;remove.disabled=true;try{await api('/admin/appointments/'+encodeURIComponent(a.id),{method:'DELETE'});await load()}catch(err){alert(err.message)}finally{remove.disabled=false}});
   const accept=document.createElement('button');accept.className='btn';accept.textContent='Aceitar agendamento';accept.disabled=a.status==='confirmed';accept.addEventListener('click',async()=>{accept.disabled=true;try{await api('/admin/appointments/'+encodeURIComponent(a.id),{method:'PATCH',body:JSON.stringify({status:'confirmed'})});await load()}catch(err){alert(err.message)}finally{accept.disabled=false}});
@@ -138,7 +140,7 @@ function render(){
   view.addEventListener('click',()=>{detail.hidden=!detail.hidden;view.textContent=detail.hidden?'👁️ Visualizar agendamento':'Ocultar detalhes'});
   actions.append(view,select,save,accept,refuse);
   if(a.status==='confirmed'){const complete=document.createElement('button');complete.className='btn';complete.textContent='Marcar como concluído';complete.addEventListener('click',async()=>{if(!confirm('Confirma que este atendimento foi realizado?'))return;complete.disabled=true;try{await api('/admin/appointments/'+encodeURIComponent(a.id),{method:'PATCH',body:JSON.stringify({status:'completed'})});await load()}catch(err){alert(err.message)}finally{complete.disabled=false}});actions.append(complete)}
-  actions.append(remove);el.append(top,title,service,phone,notes,actions,detail);box.append(el);
+  actions.append(remove);el.append(top,title,service,phone,notes,internalLabel,actions,detail);box.append(el);
  });
 }
 async function load(){const box=$('appointments');box.innerHTML='<div class="empty">Carregando agenda...</div>';try{const data=await api('/admin/appointments');allAppointments=data.appointments||[];updateStats(allAppointments);render()}catch(err){box.innerHTML='';const message=document.createElement('div');message.className='empty';message.textContent=err.message;box.append(message);if(err.message.includes('autorizado')){$('dashboard').classList.add('hidden');$('login').classList.remove('hidden')}}}
@@ -219,7 +221,7 @@ $('newServiceForm').addEventListener('submit',async e=>{e.preventDefault();const
 $('durationUnit').addEventListener('change',()=>{const toMinutes=$('durationUnit').value==='minutes';document.querySelectorAll('[data-service]').forEach(input=>{const minutes=Number(input.dataset.durationMinutes)||60;input.value=String(Number((toMinutes?minutes:minutes/60).toFixed(2)));input.min='0.01';input.max=toMinutes?'720':'12';input.step='any';input.placeholder='Digite a duração'});$('durationHint').textContent='Digite livremente a duração de cada serviço na unidade selecionada.'});
 $('closeConfig').addEventListener('click',()=>showAdminTab('appointmentsTab'));
 function showAdminTab(tab){const config=tab!=='appointmentsTab';$('adminTabs').classList.remove('hidden');$('dashboard').classList.toggle('hidden',config);$('configPanel').classList.toggle('hidden',!config);$('appointmentsTab').classList.toggle('hidden',tab!=='appointmentsTab');$('servicesTab').classList.toggle('hidden',tab!=='servicesTab');$('scheduleTab').classList.toggle('hidden',tab!=='scheduleTab');$('scheduleSettings').classList.toggle('hidden',tab!=='scheduleTab');document.querySelectorAll('.admin-tab').forEach(b=>{const active=b.dataset.tab===tab;b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active))});}
-document.querySelectorAll('.admin-tab').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.tab==='appointmentsTab'){showAdminTab('appointmentsTab')}else{openConfig();showAdminTab(b.dataset.tab)}}));
+document.querySelectorAll('.admin-tab').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.tab==='appointmentsTab'){showAdminTab('appointmentsTab');load()}else{openConfig();showAdminTab(b.dataset.tab)}}));
 
 async function loadBlocks(){
  const box=$('blocksList');box.innerHTML='<div class="empty">Carregando bloqueios...</div>';
@@ -285,4 +287,15 @@ $('saveScheduleConfig').addEventListener('click',async()=>{
 });
 async function initializeSession(){try{await api('/admin/appointments');$('login').classList.add('hidden');$('adminTabs').classList.remove('hidden');$('dashboard').classList.remove('hidden');showAdminTab('appointmentsTab');load()}catch(err){$('dashboard').classList.add('hidden');$('login').classList.remove('hidden')}}
 initializeSession();
+// Mantém a agenda sincronizada automaticamente, sem exigir que a proprietária atualize a página.
+let appointmentRefreshTimer=null;
+function startAppointmentAutoRefresh(){
+ if(appointmentRefreshTimer!==null)return;
+ appointmentRefreshTimer=setInterval(()=>{
+  const loggedIn=!$('dashboard').classList.contains('hidden')&&!$('appointmentsTab').classList.contains('hidden');
+  if(loggedIn&&!document.hidden)load();
+ },15000);
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!$('appointmentsTab').classList.contains('hidden'))load()});
+startAppointmentAutoRefresh();
 </script></body></html>
