@@ -326,7 +326,7 @@ if (path === "/admin/config" && request.method === "GET") {
       try{body=await request.json()}catch{return json({error:"Dados inválidos."},400)}
       if(!id||!body||typeof body!=="object"||Array.isArray(body))return json({error:"Agendamento inválido."},400);
       const allowed=new Set(["requested","confirmed","cancelled","completed","no_show"]);
-      const current=await env.DB.prepare("SELECT id,status,service_id,starts_at,ends_at,customer_notes,internal_notes FROM appointments WHERE id=?").bind(id).first();
+      let current;try{current=await env.DB.prepare("SELECT id,status,service_id,starts_at,ends_at,customer_notes,internal_notes FROM appointments WHERE id=?").bind(id).first()}catch{current=await env.DB.prepare("SELECT id,status,service_id,starts_at,ends_at,customer_notes FROM appointments WHERE id=?").bind(id).first()}
       if(!current)return json({error:"Agendamento não encontrado."},404);
       const nextStatus=body.status===undefined?current.status:body.status;
       if(!allowed.has(nextStatus))return json({error:"Status inválido."},400);
@@ -350,9 +350,16 @@ if (path === "/admin/config" && request.method === "GET") {
         if(items.length){items=items.map(item=>({...item,time,starts_at:startsAt,ends_at:endsAt}));notes=marker+JSON.stringify(items)+notes.slice(endMarker+2)}
       }
       const internal=body.internal_notes===undefined?String(current.internal_notes||""):cleanText(body.internal_notes,500);
-      try{await env.DB.prepare("UPDATE appointments SET status=?,starts_at=?,ends_at=?,customer_notes=?,internal_notes=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(nextStatus,startsAt,endsAt,notes,internal,id).run()}
-      catch{await env.DB.prepare("UPDATE appointments SET status=?,starts_at=?,ends_at=?,customer_notes=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(nextStatus,startsAt,endsAt,notes,id).run()}
-      return json({ok:true,message:body.starts_at!==undefined?"Agendamento reagendado.":"Agendamento atualizado."});
+      let saved=false,lastError=null;
+      const updates=[
+        ["UPDATE appointments SET status=?,starts_at=?,ends_at=?,customer_notes=?,internal_notes=?,updated_at=CURRENT_TIMESTAMP WHERE id=?", [nextStatus,startsAt,endsAt,notes,internal,id]],
+        ["UPDATE appointments SET status=?,starts_at=?,ends_at=?,customer_notes=?,updated_at=CURRENT_TIMESTAMP WHERE id=?", [nextStatus,startsAt,endsAt,notes,id]],
+        ["UPDATE appointments SET status=?,starts_at=?,ends_at=?,customer_notes=?,internal_notes=? WHERE id=?", [nextStatus,startsAt,endsAt,notes,internal,id]],
+        ["UPDATE appointments SET status=?,starts_at=?,ends_at=?,customer_notes=? WHERE id=?", [nextStatus,startsAt,endsAt,notes,id]]
+      ];
+      for(const [sql,values] of updates){try{const result=await env.DB.prepare(sql).bind(...values).run();if(result.meta?.changes){saved=true;break}}catch(error){lastError=error}}
+      if(!saved)return json({error:"Não foi possível gravar o reagendamento no banco de dados. "+(lastError?.message||"Verifique a estrutura da agenda.")},500);
+      return json({ok:true,starts_at:startsAt,message:body.starts_at!==undefined?"Agendamento reagendado e salvo.":"Agendamento atualizado."});
     }
   }
   return json({error:"Rota não encontrada."},404);
