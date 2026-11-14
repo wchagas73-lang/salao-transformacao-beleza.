@@ -65,7 +65,7 @@ export async function onRequest({request, env}) {
     const rows=await env.DB.prepare("SELECT id,duration_minutes,is_active FROM services WHERE id IN ("+serviceIds.map(()=>"?").join(",")+")").bind(...serviceIds).all();
     if((rows.results||[]).length!==serviceIds.length || (rows.results||[]).some(x=>!x.is_active)) return json({error:"Um dos serviços não está disponível."},400);
     const configuredRows=rows.results||[];
-    if(configuredRows.some(x=>!Number.isInteger(Number(x.duration_minutes))||Number(x.duration_minutes)<1))return json({configured:true,duration_configured:false,slots:[],options:[],duration_minutes:0,message:'A duração deste serviço ainda não foi configurada pelo salão.'});
+    // A duração não restringe a escolha do horário; o salão confirma manualmente.
     const rawDuration=configuredRows.reduce((sum,x)=>sum+Number(x.duration_minutes),0);
     const duration=0;
     const hoursRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='weekly_hours'").first();
@@ -111,7 +111,7 @@ export async function onRequest({request, env}) {
     if(serviceRows.length!==serviceIds.length||serviceRows.some(x=>!x.is_active))return json({error:"Um dos serviços selecionados não está disponível no momento."},400);
     const byId=new Map(serviceRows.map(x=>[x.id,x]));
     const ordered=serviceIds.map(id=>byId.get(id));
-    if(ordered.some(x=>!Number.isInteger(Number(x.duration_minutes))||Number(x.duration_minutes)<1))return json({error:'Um dos serviços ainda não tem duração configurada. O salão precisa definir a duração antes de liberar o agendamento.'},409);
+    // Solicitações podem ser registradas mesmo sem duração cadastrada.
     const rawDuration=ordered.reduce((sum,x)=>sum+Number(x.duration_minutes),0);
     const duration=Math.ceil(rawDuration/30)*30;
     const primary=ordered[0],serviceNames=ordered.map(x=>x.name),id=crypto.randomUUID();
