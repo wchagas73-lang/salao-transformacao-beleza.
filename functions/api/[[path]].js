@@ -121,7 +121,7 @@ export async function onRequest({request, env}) {
     const rawDuration=ordered.reduce((sum,x)=>sum+Number(x.duration_minutes),0);
     const duration=Math.ceil(rawDuration/30)*30;
     const primary=ordered[0],serviceNames=ordered.map(x=>x.name),id=crypto.randomUUID();
-    const serviceItems=ordered.map(service=>{const itemDuration=Number(service.duration_minutes),start=Date.parse(startsAt),end=start+itemDuration*60000;return {name:service.name,time,starts_at:startsAt,ends_at:new Date(end+10800000).toISOString().slice(0,19)+"-03:00",duration_minutes:itemDuration}});
+    const [pricesSetting,percentsSetting]=await Promise.all([env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='service_prices'").first(),env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='service_deposit_percents'").first()]);let savedPrices={...DEFAULT_SERVICE_PRICES},savedPercents={};try{if(pricesSetting?.setting_value)savedPrices={...savedPrices,...JSON.parse(pricesSetting.setting_value)}}catch{}try{savedPercents=JSON.parse(percentsSetting?.setting_value||"{}")}catch{}const serviceItems=ordered.map(service=>{const itemDuration=Number(service.duration_minutes),start=Date.parse(startsAt),end=start+itemDuration*60000;return {name:service.name,time,starts_at:startsAt,ends_at:new Date(end+10800000).toISOString().slice(0,19)+"-03:00",duration_minutes:itemDuration,price:Number(savedPrices[service.id]??savedPrices[service.name]??DEFAULT_SERVICE_PRICES[service.name]??0),deposit_percent:Number(savedPercents[service.id]??0)}});
     const storedNotes="[[BOOKING_ITEMS:"+JSON.stringify(serviceItems)+"]]"+(notes?" | Observações: "+notes:"");
     const hoursRow=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='weekly_hours'").first();
     const defaultWeekly={"0":null,"1":{open:"08:00",close:"20:00"},"2":{open:"08:00",close:"20:00"},"3":{open:"08:00",close:"20:00"},"4":{open:"08:00",close:"20:00"},"5":{open:"08:00",close:"20:00"},"6":{open:"08:00",close:"20:00"}};
@@ -320,7 +320,7 @@ if (path === "/admin/config" && request.method === "GET") {
       ]);
       let priceMap={},percentMap={};try{priceMap=JSON.parse(priceRow?.setting_value||"{}")}catch{}try{percentMap=JSON.parse(percentRow?.setting_value||"{}")}catch{}
       const serviceMap=new Map((serviceRows.results||[]).map(s=>[s.name.toLocaleLowerCase("pt-BR"),s.id]));
-      for(const appointment of appointments){appointment.service_items=(appointment.service_items||[]).map(item=>{const serviceId=serviceMap.get(String(item.name||"").toLocaleLowerCase("pt-BR"));const price=Number(priceMap[serviceId]??priceMap[item.name]??DEFAULT_SERVICE_PRICES[item.name]??0);const percent=Number(percentMap[serviceId]??0);return {...item,price,deposit_percent:percent}})}
+      for(const appointment of appointments){appointment.service_items=(appointment.service_items||[]).map(item=>{const serviceId=serviceMap.get(String(item.name||"").toLocaleLowerCase("pt-BR"));const fallbackPrice=Number(priceMap[serviceId]??priceMap[item.name]??DEFAULT_SERVICE_PRICES[item.name]??0);const fallbackPercent=Number(percentMap[serviceId]??0);return {...item,price:item.price!==undefined&&item.price!==null?Number(item.price):fallbackPrice,deposit_percent:item.deposit_percent!==undefined&&item.deposit_percent!==null?Number(item.deposit_percent):fallbackPercent}})}
       return json({appointments});
     }
     if (path.startsWith("/admin/appointments/") && request.method === "DELETE") {
