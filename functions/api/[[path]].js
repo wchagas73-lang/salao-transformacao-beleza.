@@ -79,12 +79,18 @@ export async function onRequest({request, env}) {
     const toMin=s=>Number(s.slice(0,2))*60+Number(s.slice(3,5)),open=toMin(hours.open),close=toMin(hours.close),pauseStart=/^\d{2}:\d{2}$/.test(hours.break_start||"")?toMin(hours.break_start):null,pauseEnd=/^\d{2}:\d{2}$/.test(hours.break_end||"")?toMin(hours.break_end):null;
     const interval=30;
     const dayStart=date+"T00:00:00-03:00",nextDay=new Date(Date.UTC(year,month-1,day+1)).toISOString().slice(0,10),dayEnd=nextDay+"T00:00:00-03:00";
+    const blockRows=await env.DB.prepare("SELECT starts_at,ends_at,reason FROM blocked_periods WHERE starts_at < ? AND ends_at > ?").bind(dayEnd,dayStart).all();
+    const blocks=blockRows.results||[];
     const slots=[],options=[];
-    for(let m=open;m<=close;m+=interval){
-      const hh=String(Math.floor(m/60)).padStart(2,"0"),mm=String(m%60).padStart(2,"0"),label=hh+":"+mm,start=Date.parse(date+"T"+label+":00-03:00"),end=start+duration*60000;
+    for(let m=open;m<close;m+=interval){
+      const hh=String(Math.floor(m/60)).padStart(2,"0"),mm=String(m%60).padStart(2,"0"),label=hh+":"+mm,start=Date.parse(date+"T"+label+":00-03:00"),slotEnd=start+interval*60000;
       let reason="";
       if(start<=Date.now())reason="horário já passou";
-      else if(m+duration>close)reason="a duração do serviço ultrapassa o fechamento";
+      else if(pauseStart!==null&&pauseEnd!==null&&m<pauseEnd&&m+interval>pauseStart)reason="pausa ou horário de almoço";
+      else {
+        const block=blocks.find(b=>{const bs=Date.parse(b.starts_at),be=Date.parse(b.ends_at);return Number.isFinite(bs)&&Number.isFinite(be)&&start<be&&slotEnd>bs});
+        if(block)reason=block.reason?("bloqueado: "+block.reason):"período bloqueado pelo salão";
+      }
       const available=!reason;
       options.push({time:label,available,reason});if(available)slots.push(label);
     }
@@ -129,7 +135,11 @@ export async function onRequest({request, env}) {
       const endDate=new Date(endEpoch+3*60*60000).toISOString().slice(0,19);endsAt=endDate+"-03:00";
     const interval=30;
       const pauseStart=/^\d{2}:\d{2}$/.test(hours.break_start||"")?toMin(hours.break_start):null,pauseEnd=/^\d{2}:\d{2}$/.test(hours.break_end||"")?toMin(hours.break_end):null;
-      if(startMin<toMin(hours.open)||startMin>toMin(hours.close)||(startMin-toMin(hours.open))%interval!==0)return json({error:"Esse horário está fora da agenda configurada para a duração total dos serviços."},409);
+      if(startMin<toMin(hours.open)||startMin>=toMin(hours.close)||(startMin-toMin(hours.open))%interval!==0)return json({error:"Esse horário está fora do expediente configurado."},409);
+      if(pauseStart!==null&&pauseEnd!==null&&startMin<pauseEnd&&startMin+interval>pauseStart)return json({error:"Esse horário está dentro da pausa ou do almoço do salão. Escolha outro horário."},409);
+      const slotEnd=Date.parse(startsAt)+interval*60000;
+      const requestedBlock=await env.DB.prepare("SELECT reason FROM blocked_periods WHERE starts_at < ? AND ends_at > ? LIMIT 1").bind(new Date(slotEnd+10800000).toISOString().slice(0,19)+"-03:00",startsAt).first();
+      if(requestedBlock)return json({error:requestedBlock.reason?("Esse horário está bloqueado pelo salão: "+requestedBlock.reason):"Esse horário está bloqueado pelo salão. Escolha outro horário."},409);
       const inserted=await env.DB.prepare("INSERT INTO appointments (id,customer_name,customer_phone,service_id,starts_at,ends_at,status,customer_notes) VALUES (?,?,?,?,?,?,'requested',?)").bind(id,name,phone,primary.id,startsAt,endsAt,storedNotes).run();
       if(!inserted.meta?.changes)return json({error:"Não foi possível registrar a solicitação. Tente novamente."},500);
     }
@@ -197,8 +207,7 @@ export async function onRequest({request, env}) {
       const start=cleanText(body.starts_at,25), end=cleanText(body.ends_at,25), reason=cleanText(body.reason,160);
       const startMs=Date.parse(start), endMs=Date.parse(end);
       if(!Number.isFinite(startMs)||!Number.isFinite(endMs)||endMs<=startMs) return json({error:"Informe início e fim válidos. O fim deve ser posterior ao início."},400);
-      const conflicts=await env.DB.prepare("SELECT COUNT(*) AS total FROM appointments WHERE status IN ('requested','confirmed') AND starts_at < ? AND (ends_at > ? OR (ends_at IS NULL AND starts_at >= ?))").bind(end,start,start).first();
-      if((conflicts?.total||0)>0) return json({error:"Já existem agendamentos nesse período. Resolva esses pedidos antes de bloquear o horário."},409);
+      // O bloqueio configurado pelo salão prevalece sobre a oferta pública, sem apagar pedidos já registrados.
       const id=crypto.randomUUID();
       await env.DB.prepare("INSERT INTO blocked_periods(id,starts_at,ends_at,reason) VALUES(?,?,?,?)").bind(id,start,end,reason).run();
       return json({ok:true,id},201);
