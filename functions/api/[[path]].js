@@ -314,36 +314,37 @@ if (path === "/admin/config" && request.method === "GET") {
       return json({ok:true,message:"Agendamento excluído."});
     }
     if (path.startsWith("/admin/appointments/") && request.method === "PATCH") {
-      const id=path.split("/").pop(); let body; try { body=await request.json(); } catch { return json({error:"Dados inválidos."},400); }
+      const id=decodeURIComponent(path.split("/").pop()||"");let body;
+      try{body=await request.json()}catch{return json({error:"Dados inválidos."},400)}
+      if(!id||!body||typeof body!=="object"||Array.isArray(body))return json({error:"Agendamento inválido."},400);
       const allowed=new Set(["requested","confirmed","cancelled","completed","no_show"]);
-      if (!allowed.has(body.status)) return json({error:"Status inválido."},400);
-      if(body.status==="confirmed"){
-        const slot=await env.DB.prepare("SELECT starts_at,ends_at FROM appointments WHERE id=?").bind(id).first();
-        if(!slot)return json({error:"Agendamento não encontrado."},404);
-        if(slot.ends_at){
-          const conflict=await env.DB.prepare("SELECT COUNT(*) AS total FROM appointments WHERE id<>? AND status='confirmed' AND starts_at < ? AND ends_at > ?").bind(id,slot.ends_at,slot.starts_at).first();
-          if(Number(conflict?.total)>0)return json({error:"Este horário já foi confirmado para outro atendimento. Atualize a agenda antes de confirmar."},409);
-        }
-      }
-      let current,hasInternalNotes=true;
-      try{current=await env.DB.prepare("SELECT internal_notes FROM appointments WHERE id=?").bind(id).first()}
-      catch{hasInternalNotes=false;current=await env.DB.prepare("SELECT customer_notes FROM appointments WHERE id=?").bind(id).first()}
+      const current=await env.DB.prepare("SELECT id,status,service_id,starts_at,ends_at,customer_notes,internal_notes FROM appointments WHERE id=?").bind(id).first();
       if(!current)return json({error:"Agendamento não encontrado."},404);
-      if(hasInternalNotes){
-        const savedNotes=body.internal_notes===undefined?String(current.internal_notes||""):cleanText(body.internal_notes,500);
-        const result=await env.DB.prepare("UPDATE appointments SET status=?, internal_notes=?, updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(body.status||"requested",savedNotes,id).run();
-        if(!result.meta?.changes)return json({error:"Agendamento não encontrado."},404);
-      }else{
-        let customerNotes=String(current.customer_notes||"");
-        if(body.internal_notes!==undefined){
-          const marker="[[INTERNAL_NOTES:",end=customerNotes.indexOf("]]");
-          if(customerNotes.startsWith(marker)&&end>0)customerNotes=customerNotes.slice(end+2).replace(/^ \\| /,"");
-          customerNotes=marker+encodeURIComponent(cleanText(body.internal_notes,500))+"]]"+(customerNotes?" | "+customerNotes:"");
-        }
-        const result=await env.DB.prepare("UPDATE appointments SET status=?, customer_notes=?, updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(body.status||"requested",customerNotes,id).run();
-        if(!result.meta?.changes)return json({error:"Agendamento não encontrado."},404);
+      const nextStatus=body.status===undefined?current.status:body.status;
+      if(!allowed.has(nextStatus))return json({error:"Status inválido."},400);
+      let startsAt=current.starts_at,endsAt=current.ends_at,notes=String(current.customer_notes||"");
+      if(body.starts_at!==undefined){
+        const requested=cleanText(body.starts_at,25),match=requested.match(/^(\\d{4}-\\d{2}-\\d{2})T(\\d{2}:\\d{2})(?::00)?(?:-03:00)?$/);
+        if(!match)return json({error:"Informe uma nova data e horário válidos."},400);
+        const date=match[1],time=match[2],[yy,mo,dd]=date.split("-").map(Number),[hh,mm]=time.split(":").map(Number),epoch=Date.parse(date+"T"+time+":00-03:00");
+        if(!Number.isFinite(epoch)||epoch<=Date.now()||hh>23||mm>59)return json({error:"A nova data e horário precisam ser futuros e válidos."},400);
+        const weekday=new Date(Date.UTC(yy,mo-1,dd)).getUTCDay(),hr=await env.DB.prepare("SELECT setting_value FROM salon_settings WHERE setting_key='weekly_hours'").first();
+        const defaults={"0":null,"1":{open:"08:00",close:"20:00"},"2":{open:"08:00",close:"20:00"},"3":{open:"08:00",close:"20:00"},"4":{open:"08:00",close:"20:00"},"5":{open:"08:00",close:"20:00"},"6":{open:"08:00",close:"20:00"}};
+        let weekly=defaults;try{if(hr?.setting_value)weekly=JSON.parse(hr.setting_value)}catch{}
+        const hours=weekly?.[String(weekday)],toMin=v=>Number(v.slice(0,2))*60+Number(v.slice(3,5)),startMin=hh*60+mm;
+        if(!hours)return json({error:"O salão não atende nessa data. Escolha outro dia."},409);
+        if(startMin<toMin(hours.open)||startMin>=toMin(hours.close)||(startMin-toMin(hours.open))%30!==0)return json({error:"Escolha um horário dentro do expediente, em intervalos de 30 minutos."},409);
+        const marker="[[BOOKING_ITEMS:",at=notes.indexOf(marker),endMarker=notes.indexOf("]]",at);let items=[];
+        if(at===0&&endMarker>marker.length){try{items=JSON.parse(notes.slice(marker.length,endMarker))}catch{}}
+        let duration=items.reduce((sum,item)=>sum+Math.max(0,Number(item.duration_minutes)||0),0);
+        if(!duration){const svc=await env.DB.prepare("SELECT duration_minutes FROM services WHERE id=?").bind(current.service_id).first();duration=Math.max(0,Number(svc?.duration_minutes)||0)}
+        startsAt=date+"T"+time+":00-03:00";endsAt=new Date(epoch+duration*60000+10800000).toISOString().slice(0,19)+"-03:00";
+        if(items.length){items=items.map(item=>({...item,time,starts_at:startsAt,ends_at:endsAt}));notes=marker+JSON.stringify(items)+notes.slice(endMarker+2)}
       }
-      return json({ok:true});
+      const internal=body.internal_notes===undefined?String(current.internal_notes||""):cleanText(body.internal_notes,500);
+      try{await env.DB.prepare("UPDATE appointments SET status=?,starts_at=?,ends_at=?,customer_notes=?,internal_notes=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(nextStatus,startsAt,endsAt,notes,internal,id).run()}
+      catch{await env.DB.prepare("UPDATE appointments SET status=?,starts_at=?,ends_at=?,customer_notes=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(nextStatus,startsAt,endsAt,notes,id).run()}
+      return json({ok:true,message:body.starts_at!==undefined?"Agendamento reagendado.":"Agendamento atualizado."});
     }
   }
   return json({error:"Rota não encontrada."},404);
