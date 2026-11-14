@@ -320,7 +320,7 @@ if (path === "/admin/config" && request.method === "GET") {
       ]);
       let priceMap={},percentMap={};try{priceMap=JSON.parse(priceRow?.setting_value||"{}")}catch{}try{percentMap=JSON.parse(percentRow?.setting_value||"{}")}catch{}
       const serviceMap=new Map((serviceRows.results||[]).map(s=>[s.name.toLocaleLowerCase("pt-BR"),s.id]));
-      for(const appointment of appointments){appointment.service_items=(appointment.service_items||[]).map(item=>{const serviceId=serviceMap.get(String(item.name||"").toLocaleLowerCase("pt-BR"));const fallbackPrice=Number(priceMap[serviceId]??priceMap[item.name]??DEFAULT_SERVICE_PRICES[item.name]??0);const fallbackPercent=Number(percentMap[serviceId]??0);return {...item,price:item.price!==undefined&&item.price!==null?Number(item.price):fallbackPrice,deposit_percent:item.deposit_percent!==undefined&&item.deposit_percent!==null?Number(item.deposit_percent):fallbackPercent}})}
+      for(const appointment of appointments){appointment.service_items=(appointment.service_items||[]).map(item=>{const serviceId=serviceMap.get(String(item.name||"").toLocaleLowerCase("pt-BR"));const fallbackPrice=Number(priceMap[serviceId]??priceMap[item.name]??DEFAULT_SERVICE_PRICES[item.name]??0);const fallbackPercent=Number(percentMap[serviceId]??0);const savedPrice=Number(item.price);const savedPercent=Number(item.deposit_percent);return {...item,price:Number.isFinite(savedPrice)&&savedPrice>0?savedPrice:fallbackPrice,deposit_percent:Number.isFinite(savedPercent)&&savedPercent>0?savedPercent:fallbackPercent}})}
       return json({appointments});
     }
     if (path.startsWith("/admin/appointments/") && request.method === "DELETE") {
