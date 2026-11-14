@@ -275,8 +275,8 @@
     }
     async function loadAvailableSlots(){
       slotsList.innerHTML='<option value="">Carregando horários disponíveis...</option>';timeInput.value='';currentAvailability=null;
-      if(!selectedServiceIds.length||!dateInput.value){slotsList.innerHTML='<option value="">Selecione os serviços e a data primeiro</option>';availabilityHint.textContent='Escolha um ou mais serviços e a data para ver somente os horários livres.';return}
-      availabilityHint.textContent='Consultando os horários livres...';
+      if(!selectedServiceIds.length||!dateInput.value){slotsList.innerHTML='<option value="">Selecione os serviços e a data primeiro</option>';availabilityHint.textContent='Escolha os serviços e a data para ver os horários dentro do expediente.';return}
+      availabilityHint.textContent='Consultando o expediente...';
       try{
         const response=await fetch('/api/availability?services='+encodeURIComponent(selectedServiceIds.join(','))+'&date='+encodeURIComponent(dateInput.value),{cache:'no-store'});
         const data=await response.json();if(!response.ok)throw new Error(data.error||'Não foi possível consultar a agenda.');
@@ -284,7 +284,7 @@
         if(data.duration_configured===false){slotsList.innerHTML='<option value="">Duração do serviço não configurada</option>';availabilityHint.textContent=data.message||'O salão precisa definir a duração deste serviço antes de liberar os agendamentos.';return}
         currentAvailability=data;slotsList.innerHTML='<option value="">Selecione um horário</option>';
         (data.options||[]).forEach(item=>{const option=document.createElement('option');option.value=item.time;option.textContent=item.available?item.time:item.time+' • '+(item.reason||'indisponível');option.disabled=!item.available;if(!item.available)option.style.color='#777';slotsList.append(option)});
-        availabilityHint.textContent='Escolha qualquer horário dentro do expediente. O mesmo horário pode receber mais de uma solicitação; a confirmação será feita pelo salão.';
+        availabilityHint.textContent='Escolha qualquer horário dentro do expediente. O mesmo horário pode receber várias solicitações; o salão combinará e confirmará o horário com você.';
       }catch(err){slotsList.innerHTML='<option value="">Não foi possível carregar os horários</option>';availabilityHint.textContent=err.message||'Não foi possível consultar a agenda agora.'}
     }
     document.getElementById('addAnotherService').addEventListener('click',()=>document.getElementById('serviceCatalog').scrollIntoView({behavior:'smooth',block:'start'}));
