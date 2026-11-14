@@ -330,13 +330,13 @@
       const digits=v('phone').replace(/\\D/g,'');
       if(digits.length<10||digits.length>13)errors.push({id:'phone',message:'Informe um telefone válido com DDD.'});
       if(errors.length){reportValidation(errors);return}
-      const payload={name:v('name'),phone:v('phone'),services:[...selectedServiceIds],service:selectedServiceIds[0],date:v('date'),time:v('time'),notes:v('details')};
+      const payload={name:v('name'),phone:v('phone'),services:[...selectedServiceIds],service:selectedServiceIds[0],service_values:selectedServiceIds.map(id=>({id,price:Number(window.bookingServicePrices[id])||0,deposit_percent:Number(window.bookingServicePercents[id])||0})),date:v('date'),time:v('time'),notes:v('details')};
       const button=this.querySelector('button[type="submit"]');button.disabled=true;button.textContent='Registrando solicitação...';
       try{
         const response=await fetch('/api/request',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
         const result=await response.json();if(!response.ok)throw new Error(result.error||'Não foi possível registrar a solicitação.');
         const moneyText=value=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(value);
-        const selectedServiceValues=payload.services.map(id=>({id,amount:Number(window.bookingServicePrices[id])||0,percent:Number(window.bookingServicePercents[id])||0}));
+        const selectedServiceValues=(result.service_appointments||[]).map(item=>({amount:Number(item.price)||0,percent:Number(item.deposit_percent)||0}));
         const total=selectedServiceValues.reduce((sum,service)=>sum+service.amount,0);
         const totalSignal=selectedServiceValues.reduce((sum,service)=>sum+Math.round(service.amount*service.percent)/100,0);
         const serviceLines=(result.service_appointments||[]).map((item,index)=>{const service=selectedServiceValues[index]||{amount:0,percent:0};const signal=Math.round(service.amount*service.percent)/100;return '   • '+item.name+'\n     🕒 Horário: '+item.time+'\n     ⏱️ Duração: '+item.duration_minutes+' min\n     💰 Valor: '+moneyText(service.amount)+'\n     '+(service.percent>0?'💳 Sinal ('+service.percent+'%): '+moneyText(signal):'✅ Sem sinal')});
